@@ -1,0 +1,155 @@
+
+/*-----------------------------------------------------------------------------
+| Copyright (c) 2014-2015, PhosphorJS Contributors
+|
+| Distributed under the terms of the BSD 3-Clause License.
+|
+| The full license is in the file LICENSE, distributed with this software.
+|----------------------------------------------------------------------------*/
+body {
+  margin: 0;
+  padding: 0;
+  background: #F5F6F7;
+}
+
+$tab-height: 32;
+
+/*
+some customisations include:
+- add more space to tab height
+- make tabs equal height
+- use transparency rather than borders for dragged panels
+*/
+
+#main {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+}
+
+.content {
+  min-width: 50px;
+  min-height: 50px;
+}
+
+.red {
+  background: #E74C3C;
+}
+
+.yellow {
+  background: #F1C40F;
+}
+
+.green {
+  background: #27AE60;
+}
+
+.blue {
+  background: #3498DB;
+}
+
+.lm-DockTabPanel {
+  padding-right: 2px;
+  padding-bottom: 2px;
+}
+
+.lm-DockTabPanel > .lm-StackedPanel {
+  padding: 10px;
+  background: white;
+  border: 1px solid #C0C0C0;
+  border-top: none;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.lm-DockPanel-overlay {
+  background: rgba(255, 255, 255, 0.6);
+  //border: 1px dashed black;
+}
+
+.lm-DockPanel-overlay.lm-mod-root-top,
+.lm-DockPanel-overlay.lm-mod-root-left,
+.lm-DockPanel-overlay.lm-mod-root-right,
+.lm-DockPanel-overlay.lm-mod-root-bottom,
+.lm-DockPanel-overlay.lm-mod-root-center {
+  border-width: 2px;
+}
+
+.lm-TabBar {
+  min-height: $tab-height + px;
+  max-height: $tab-height + px;
+}
+
+.lm-TabBar-header {
+  display: none;
+}
+
+.lm-TabBar-footer {
+  flex: 0 0 1px;
+  background: #C0C0C0;
+}
+
+.lm-TabBar-content {
+  min-width: 0;
+  align-items: flex-end;
+}
+
+.lm-TabBar-tab {
+  flex: 0 1 125px;
+  min-height: $tab-height + px;
+  max-height: $tab-height + px;
+  min-width: 35px;
+  margin-left: -1px;
+  //border: 1px solid #C0C0C0;
+  border-bottom: none;
+  padding: 0px 10px;
+  background: #E5E5E5;
+  //font: 12px Helvetica, Arial, sans-serif;
+
+  //border-radius: 10px 10px 0 0;
+}
+
+.lm-TabBar-tab:first-child {
+  margin-left: 0;
+}
+
+
+.lm-TabBar-tab.lm-mod-current {
+//  min-height: 23px;
+//  max-height: 23px;
+  background: white;
+  //transform: translateY(1px);
+}
+
+.lm-TabBar-tab:hover:not(.lm-mod-current) {
+  background: #F0F0F0;
+}
+
+.lm-TabBar-tabIcon,
+.lm-TabBar-tabText,
+.lm-TabBar-tabLabel,
+.lm-TabBar-tabCloseIcon {
+  line-height: $tab-height + px;
+}
+
+.lm-TabBar-tab.lm-mod-closable > .lm-TabBar-tabCloseIcon {
+  margin-left: 4px;
+}
+
+.lm-TabBar-tab.lm-mod-closable > .lm-TabBar-tabCloseIcon:before {
+  content: '\00d7';
+  //font-family: FontAwesome;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 28px;
+}
+
+.lm-TabBar-tab.lm-mod-drag-image {
+  min-height: $tab-height + px;
+  max-height: $tab-height + px;
+  min-width: 125px;
+  border: none;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  transform: translateX(-40%) translateY(-58%);
+}

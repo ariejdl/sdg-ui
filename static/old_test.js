@@ -19,8 +19,7 @@ function simpleTerm() {
   make_terminal(term, { cols: 40, rows: 10 }, "ws://" + BASE_URL + "/terminals/websocket/1");    
 }
 
-// file tests, TODO: uncomment
-/*
+// file tests
 fetch(HOST_URL + "/api/contents/")
   .then(r => r.json())
   .then(function(r) {
@@ -65,7 +64,7 @@ fetch(HOST_URL + "/api/contents/")
         
       });
   });
-*/
+
 
 document.addEventListener('DOMContentLoaded', function() {
   simpleTerm()

@@ -1,0 +1,7 @@
+
+class NetworkSocket():
+    pass
+
+
+handlers = [
+]
