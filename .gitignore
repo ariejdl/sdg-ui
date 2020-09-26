@@ -1,0 +1,13 @@
+
+*~
+kernel-*.json
+.ipynb_checkpoints/
+node_modules/
+__pycache__
+_inspir/
+_notes/
+*#
+.#*
+*.egg-info/
+tests/_build/*
+tests/_launch/*
