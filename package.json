@@ -1,0 +1,15 @@
+{
+  "name": "static_site",
+  "version": "1.0.0",
+  "description": "tip, simulate low memory in safari `sudo memory_pressure -S -l critical`",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "sass": "^1.26.5"
+  }
+}
