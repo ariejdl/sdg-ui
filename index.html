@@ -2,15 +2,24 @@
 <html>
   <head>
 
-    <link rel="stylesheet" href="/static/xterm.css?q=1" />
-    <link rel="stylesheet" href="/static/style.css?q=1" />
+    <link rel="stylesheet" href="/static/libs/xterm.css?q=1" />
+    <link rel="stylesheet" href="/static/main.css?q=1" />
 
-    <script src="/static/xterm.js?q=1"></script>
-    <script src="/static/terminado.js?q=1"></script>
+    <script src="/static/libs/d3.min.js?q=1"></script>
+    <script src="/static/libs/xterm.js?q=1"></script>
+    <script src="/static/libs/terminado.js?q=1"></script>
     
     <script type="module" src="/static/main.js?q=1"></script>
 
   </head>
   <body>
+
+    <div style="padding:40px;user-select:none;">
+      <img width="199" src="/static/images/logo.png" style="pointer-events:none;"/>
+      <h1 style="margin:0px;">code generator</h1>
+    </div>
+
+    <div class="blurry-white" style="position:absolute;width:200px;height:30px;top:100px;left:100px;border:1px solid #ccc;">
+    </div>
   </body>
 </html>
