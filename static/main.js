@@ -41,8 +41,35 @@ function setupDD() {
   
 }
 
+function dropdownMenus() {
+  // https://getbootstrap.com/2.3.2/components.html
+  // replicate CSS from here, may want a slight delay on expansion like OSX
+  d3.selectAll(".menu-item")
+    .on("click", function(e) {
+      const el = d3.select(this)
+            .select(".dropdown-menu");
+
+      const shown = !el.classed("show")
+
+      // hide others
+      d3.selectAll(".dropdown-menu")
+        .classed("show", false);
+
+      el.classed("show", shown);
+      
+      e.stopPropagation();
+    });
+
+  d3.select(document.body)
+    .on("click", () => {
+      d3.selectAll(".dropdown-menu")
+        .classed("show", false);
+    })
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 
   setupDD();
+  dropdownMenus();
   
 });
