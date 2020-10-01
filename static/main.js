@@ -67,9 +67,91 @@ function dropdownMenus() {
     })
 }
 
+function setupCyto() {
+
+  // https://js.cytoscape.org/demos/compound-nodes/code.js
+  const cy = cytoscape({
+    container: document.getElementById("cytoscape_container"),
+boxSelectionEnabled: false,
+  style: [
+    {
+      selector: 'node',
+      style: {
+        'color': 'white',
+        'font-family': "IBM Plex Mono",
+        'content': 'data(id)',
+        'text-valign': 'center',
+        'text-halign': 'center',
+        'shape': 'rectangle',
+        'background-color': '#666'
+      }
+    },
+    {
+      selector: ':parent',
+      style: {
+        'text-valign': 'top',
+        'text-halign': 'center',
+        'background-color': 'black',
+        'background-opacity': 0.5,
+        'border-width': 0,
+      }
+    },
+    {
+      selector: 'edge',
+      style: {
+        width: 5,
+        'line-color': '#666',
+        'target-arrow-color': '#666',
+        'arrow-scale': 2,
+        "curve-style": "unbundled-bezier",   
+        'control-point-weights': '0.25 0.75',
+        'control-point-distances': 'data(controlPointDistances)',        
+        'target-arrow-shape': 'triangle'
+      }
+    }
+  ],
+
+  elements: {
+    nodes: [
+      { data: { id: 'a123', parent: 'b' }, position: { x: 215, y: 85 } },
+      { data: { id: 'b' } },
+      { data: { id: 'c', parent: 'b' }, position: { x: 300, y: 85 } },
+      { data: { id: 'd' }, position: { x: 215, y: 175 } },
+      { data: { id: 'e' } },
+      { data: { id: 'f', parent: 'e' }, position: { x: 300, y: 175 } }
+    ],
+    edges: [
+      { data: { id: 'ad', source: 'a123', target: 'd' } },
+      { data: { id: 'eb', source: 'e', target: 'b' } }
+
+    ]
+  },
+
+
+  });
+
+/*
+
+  cy.add({
+    group: 'nodes',
+    data: { weight: 75 },
+    position: { x: 200, y: 250 }
+  });
+
+  var eles = cy.add([
+    { group: 'nodes', data: { id: 'n0', type: 'bezier' }, position: { x: 100, y: 100 } },
+    { group: 'nodes', data: { id: 'n1' }, position: { x: 200, y: 200 } },
+    { group: 'edges', data: { id: 'e0', source: 'n0', target: 'n1' } },
+
+  ]);  
+*/
+
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 
   setupDD();
   dropdownMenus();
+  setupCyto();
   
 });
