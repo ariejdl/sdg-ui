@@ -56,6 +56,10 @@ h1 {
     z-index: 1;
 }
 
+.menu-item {
+    line-height: 20px;
+}
+
 .menu-item > div {
     transition: opacity 100ms ease-in-out;
     padding: 5px;

@@ -106,6 +106,9 @@ function getStylesheet(url, callback) {
 
 function setupCyto() {
 
+  // TODO: snap
+  // https://cytoscape.org/cytoscape.js-edgehandles/demo-snap.html
+
   // https://js.cytoscape.org/demos/compound-nodes/code.js
   const cy = cytoscape({
     container: document.getElementById("cytoscape_container"),
@@ -140,18 +143,24 @@ function setupCyto() {
       style: {
         'color': 'white',
         'font-family': "IBM Plex Mono",
-        "font-weight": "100",
-        "font-size": "20",
+        //"font-weight": "100",
+        "font-size": "14",
         
         'content': 'data(id)',
 
-        //'text-outline-width': 1,
-        //'text-outline-color': 'black',
+        'text-outline-width': 0.5,
+        'text-outline-color': '#333',
         
         'text-valign': 'top',
         'text-halign': 'center',
         'shape': 'rectangle',
-        'background-color': '#666'
+        'background-color': '#eee',
+
+        'ghost': 'yes',
+        'ghost-offset-x': 0,
+        'ghost-offset-y': 4,
+        'ghost-opacity': 0.2
+        
       }
     },
     {
@@ -159,8 +168,8 @@ function setupCyto() {
       style: {
         'text-valign': 'top',
         'text-halign': 'center',
-        'background-color': 'black',
-        'background-opacity': 0.5,
+        'background-color': 'white',
+        'background-opacity': 0.25,
         'border-width': 0,
       }
     },
@@ -170,17 +179,22 @@ function setupCyto() {
         width: 5,
         'color': 'white',
         'font-family': "IBM Plex Mono",
-        "font-weight": "100",
-        "font-size": "20",
+        //"font-weight": "100",
+        "font-size": "14",
+
+        'text-outline-width': 0.5,
+        'text-outline-color': '#333',
+        
         
         'content': 'data(id)',
         
         'text-valign': 'top',
         'text-halign': 'center',
         'text-margin-y': -10,
+        'text-margin-x': 0,
         
-        'line-color': '#666',
-        'target-arrow-color': '#666',
+        'line-color': '#eee',
+        'target-arrow-color': '#eee',
         'arrow-scale': 2,
         "curve-style": "unbundled-bezier",   
         'control-point-weights': '0.25 0.75',
