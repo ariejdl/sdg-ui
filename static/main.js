@@ -72,15 +72,65 @@ function setupCyto() {
   // https://js.cytoscape.org/demos/compound-nodes/code.js
   const cy = cytoscape({
     container: document.getElementById("cytoscape_container"),
-boxSelectionEnabled: false,
-  style: [
+    //boxSelectionEnabled: false,
+    style: [
+      {
+        selector: 'core',
+        style: {
+          'active-bg-size': 0,
+          'active-bg-opacity': 0,
+          //'outside-texture-bg-opacity': 0
+          //'selection-box-opacity': 50,
+          //'selection-box-border-width': 10,
+          //'selection-box-border-color': ,
+          //'overlay-opacity': 0
+        }
+      },
+      {
+        selector: ':active',
+        style: {
+          // seems to be hard coded as a rounded rectangle
+          'overlay-color': '#EFA94E',
+          'overlay-opacity': 0.25,
+          'overlay-padding': 5,
+          'border-radius': '0px',
+          /* not worth it
+          'background-image': (node) => {
+              console.log(node)
+            // memoize
+            return {
+              width: 10,
+              height: 10
+            }
+          }*/
+        }
+      },
+      {
+        selector: ':selected',
+        style: {
+          // seems to be hard coded as a rounded rectangle
+          'overlay-color': '#EFA94E',
+          'overlay-opacity': 0.5,
+          'overlay-padding': 5,
+          //'background-image': 'rectangle',
+          //'overlay-padding': 0,
+         'background-color': '#EFA94E' 
+        }
+      },
     {
       selector: 'node',
       style: {
         'color': 'white',
         'font-family': "IBM Plex Mono",
+        "font-weight": "100",
+        "font-size": "20",
+        
         'content': 'data(id)',
-        'text-valign': 'center',
+
+        //'text-outline-width': 1,
+        //'text-outline-color': 'black',
+        
+        'text-valign': 'top',
         'text-halign': 'center',
         'shape': 'rectangle',
         'background-color': '#666'
@@ -146,6 +196,22 @@ boxSelectionEnabled: false,
   ]);  
 */
 
+}
+
+function grid() {
+  // https://mleibman.github.io/SlickGrid/examples/
+  // https://mleibman.github.io/SlickGrid/examples/example-spreadsheet.html
+
+  // https://github.com/mleibman/SlickGrid/wiki/Grid-Events
+  /* for tab/enter
+grid.onKeyDown.subscribe(function(e) {
+   if (e.which == 13) {
+      // open modal window
+   }
+});
+*/
+
+  // https://github.com/myliang/x-spreadsheet
 }
 
 document.addEventListener("DOMContentLoaded", function() {
