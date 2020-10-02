@@ -87,25 +87,6 @@ function setupCyto() {
         }
       },
       {
-        selector: ':active',
-        style: {
-          // seems to be hard coded as a rounded rectangle
-          'overlay-color': '#EFA94E',
-          'overlay-opacity': 0.25,
-          'overlay-padding': 5,
-          'border-radius': '0px',
-          /* not worth it
-          'background-image': (node) => {
-              console.log(node)
-            // memoize
-            return {
-              width: 10,
-              height: 10
-            }
-          }*/
-        }
-      },
-      {
         selector: ':selected',
         style: {
           // seems to be hard coded as a rounded rectangle
@@ -158,7 +139,41 @@ function setupCyto() {
         'control-point-distances': 'data(controlPointDistances)',        
         'target-arrow-shape': 'triangle'
       }
-    }
+    },
+      {
+        selector: ':active, :selected', // higher precedence at end, show border for parents
+        style: {
+          // seems to be hard coded as a rounded rectangle
+          //'overlay-border-color': '#EFA94E',
+          //'overlay-border-width': 2,
+
+          'overlay-opacity': 0,
+          /*
+          'overlay-color': '#EFA94E',
+          'overlay-padding': 5,
+          */
+
+          'border-color': '#EFA94E',
+          'border-width': 1,
+          /* not worth it
+          'background-image': (node) => {
+              console.log(node)
+            // memoize
+            return {
+              width: 10,
+              height: 10
+            }
+          }*/
+        }
+      },
+      {
+        selector: 'edge:active, edge:selected', // higher precedence at end, show border for parents
+        style: {
+          'overlay-opacity': 1,
+          'overlay-color': '#EFA94E',
+          'overlay-padding': 0,
+        }
+      }
   ],
 
   elements: {

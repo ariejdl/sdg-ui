@@ -22,7 +22,9 @@
   list-style: none;
   //background-color: white;
   background: rgba(0,0,0,0.4);
+  
   // doesn't seem to work for children
+  // https://bugs.chromium.org/p/chromium/issues/detail?id=993971
   //backdrop-filter: blur(4px); 
   
   background-clip: padding-box;
@@ -30,8 +32,6 @@
   box-shadow: 0 2px 2px rgba(0,0,0,0.5);
   border-bottom-right-radius: 3px;
   border-bottom-left-radius: 3px;
-
-  
 }
 
 .dropdown-menu.show {
