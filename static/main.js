@@ -67,6 +67,43 @@ function dropdownMenus() {
     })
 }
 
+// https://gist.github.com/NicoleY77/5606796
+function getScript(url, callback) {
+  var head	= document.getElementsByTagName("head")[0];
+  var script	= document.createElement("script");
+  var done 	= false; // Handle Script loading
+
+  script.onload = script.onreadystatechange = function() { // Attach handlers for all browsers
+    if ( !done && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") ) {
+      done = true;
+      if (callback) { callback(); }
+      script.onload = script.onreadystatechange = null; // Handle memory leak in IE
+    }
+  };
+  script.src	= url;  
+  head.appendChild(script);		
+}
+
+// https://stackoverflow.com/questions/14919894/getscript-but-for-stylesheets-in-jquery
+function getStylesheet(url, callback) {
+  var linkElem = document.createElement('link');
+  var head	= document.getElementsByTagName("head")[0];
+  var done 	= false; // Handle Script loading
+
+  linkElem.rel = 'stylesheet';
+  linkElem.type = 'text/css';
+  linkElem.onload = linkElem.onreadystatechange = function() { // Attach handlers for all browsers
+    if ( !done && (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") ) {
+      done = true;
+      if (callback) { callback(); }
+      linkElem.onload = linkElem.onreadystatechange = null; // Handle memory leak in IE
+    }
+  };
+  linkElem.href = url;  
+  head.appendChild(linkElem);		
+
+}
+
 function setupCyto() {
 
   // https://js.cytoscape.org/demos/compound-nodes/code.js
@@ -148,7 +185,12 @@ function setupCyto() {
         "curve-style": "unbundled-bezier",   
         'control-point-weights': '0.25 0.75',
         'control-point-distances': 'data(controlPointDistances)',        
-        'target-arrow-shape': 'triangle'
+        'target-arrow-shape': 'triangle',
+
+        'ghost': 'yes',
+        'ghost-offset-x': 0,
+        'ghost-offset-y': 4,
+        'ghost-opacity': 0.2
       }
     },
       {
@@ -211,6 +253,14 @@ function setupCyto() {
 
   });
 
+  cy.on('tap', 'node', (evt) => {
+    console.log(evt.target.id());
+  });
+
+  cy.on('tap', 'edge', (evt) => {
+    console.log(evt.target.id());
+  });
+  
 /*
 
   cy.add({
@@ -232,6 +282,7 @@ function setupCyto() {
 function grid() {
   // https://mleibman.github.io/SlickGrid/examples/
   // https://mleibman.github.io/SlickGrid/examples/example-spreadsheet.html
+  // https://mleibman.github.io/SlickGrid/examples/example3a-compound-editors.html
 
   // https://github.com/mleibman/SlickGrid/wiki/Grid-Events
   /* for tab/enter
@@ -243,6 +294,27 @@ grid.onKeyDown.subscribe(function(e) {
 */
 
   // https://github.com/myliang/x-spreadsheet
+}
+
+function setupMonac() {
+
+/*
+	<script>var require = { paths: { 'vs': 'node_modules/monaco-editor/min/vs' } };</script>
+	<script src="node_modules/monaco-editor/min/vs/loader.js"></script>
+	<script src="node_modules/monaco-editor/min/vs/editor/editor.main.nls.js"></script>
+	<script src="node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
+*/
+
+
+monaco.editor.create(document.getElementById("container"), {
+	value: "function hello() {\n\talert('Hello world!');\n}",
+	language: "javascript"
+});
+
+  // <div id="container" style="height:100%;"></div>
+
+
+  
 }
 
 document.addEventListener("DOMContentLoaded", function() {

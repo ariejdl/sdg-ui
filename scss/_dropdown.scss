@@ -21,15 +21,15 @@
   text-align: left; // Ensures proper alignment if parent has it changed (e.g., modal footer)
   list-style: none;
   //background-color: white;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.8);
   
   // doesn't seem to work for children
   // https://bugs.chromium.org/p/chromium/issues/detail?id=993971
-  //backdrop-filter: blur(4px); 
+  //backdrop-filter: blur(4px);
   
   background-clip: padding-box;
   border: 0px;
-  box-shadow: 0 2px 2px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   border-bottom-right-radius: 3px;
   border-bottom-left-radius: 3px;
 }
