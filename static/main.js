@@ -131,6 +131,17 @@ function setupCyto() {
       selector: 'edge',
       style: {
         width: 5,
+        'color': 'white',
+        'font-family': "IBM Plex Mono",
+        "font-weight": "100",
+        "font-size": "20",
+        
+        'content': 'data(id)',
+        
+        'text-valign': 'top',
+        'text-halign': 'center',
+        'text-margin-y': -10,
+        
         'line-color': '#666',
         'target-arrow-color': '#666',
         'arrow-scale': 2,
@@ -152,9 +163,10 @@ function setupCyto() {
           'overlay-color': '#EFA94E',
           'overlay-padding': 5,
           */
+          'color': '#EFA94E',
 
           'border-color': '#EFA94E',
-          'border-width': 1,
+          'border-width': 2,
           /* not worth it
           'background-image': (node) => {
               console.log(node)
@@ -169,9 +181,13 @@ function setupCyto() {
       {
         selector: 'edge:active, edge:selected', // higher precedence at end, show border for parents
         style: {
-          'overlay-opacity': 1,
+          'line-color': '#EFA94E',
+          'target-arrow-color': '#EFA94E',
+          /*
+          'overlay-opacity': 0,
           'overlay-color': '#EFA94E',
           'overlay-padding': 0,
+          */
         }
       }
   ],
