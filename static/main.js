@@ -293,7 +293,7 @@ function setupCyto() {
 
 }
 
-function grid() {
+function slickgrid() {
   // https://mleibman.github.io/SlickGrid/examples/
   // https://mleibman.github.io/SlickGrid/examples/example-spreadsheet.html
   // https://mleibman.github.io/SlickGrid/examples/example3a-compound-editors.html
@@ -308,9 +308,129 @@ grid.onKeyDown.subscribe(function(e) {
 */
 
   // https://github.com/myliang/x-spreadsheet
+
+
+  var grid;
+  var data = [];
+
+  var ed = Slick.Editors.Text; // FormulaEditor
+  
+  var columns = [
+    {id: "t1", name: "Title", field: "_t1", width: 120, editor: ed }, //
+    {id: "t2", name: "Title2", field: "_t2", width: 120, editor: ed },
+    {id: "t3", name: "Title3", field: "_t3", width: 120, editor: ed },
+    {id: "t4", name: "Title4", field: "_t4", width: 120, editor: ed }
+  ];
+
+  var options = {
+    editable: true,
+    enableAddRow: false,
+    enableCellNavigation: true,
+    asyncEditorLoading: false,
+//    autoEdit: false
+  };
+
+  /***
+   * A proof-of-concept cell editor with Excel-like range selection and insertion.
+   */
+  /*
+  function FormulaEditor(args) {
+    var _self = this;
+    var _editor = new Slick.Editors.Text(args);
+    var _selector;
+
+    $.extend(this, _editor);
+
+    function init() {
+      // register a plugin to select a range and append it to the textbox
+      // since events are fired in reverse order (most recently added are executed first),
+      // this will override other plugins like moverows or selection model and will
+      // not require the grid to not be in the edit mode
+      _selector = new Slick.CellRangeSelector();
+      _selector.onCellRangeSelected.subscribe(_self.handleCellRangeSelected);
+      args.grid.registerPlugin(_selector);
+    }
+
+    this.destroy = function () {
+      _selector.onCellRangeSelected.unsubscribe(_self.handleCellRangeSelected);
+      grid.unregisterPlugin(_selector);
+      _editor.destroy();
+    };
+
+    this.handleCellRangeSelected = function (e, args) {
+      _editor.setValue(
+          _editor.getValue() +
+              grid.getColumns()[args.range.fromCell].name +
+              args.range.fromRow +
+              ":" +
+              grid.getColumns()[args.range.toCell].name +
+              args.range.toRow
+      );
+    };
+
+
+    init();
+  }  
+  */
+
+//  $(function () {
+    for (var i = 0; i < 500; i++) {
+      var d = (data[i] = {});
+
+      d["_t1"] = "Task " + i;
+      d["_t2"] = Math.random();
+      d["_t3"] = Math.random();
+      d["_t4"] = Math.random();
+    }
+
+    grid = new Slick.Grid("#slickgrid", data, columns, options);
+
+    grid.onValidationError.subscribe(function (e, args) {
+      alert(args.validationResults.msg);
+    });
+  //  })
+
+     grid.setSelectionModel(new Slick.CellSelectionModel());
+    grid.registerPlugin(new Slick.AutoTooltips());
+
+    // set keyboard focus on the grid
+    grid.getCanvasNode().focus();
+
+    var copyManager = new Slick.CellCopyManager();
+    grid.registerPlugin(copyManager);
+
+    copyManager.onPasteCells.subscribe(function (e, args) {
+      if (args.from.length !== 1 || args.to.length !== 1) {
+        throw "This implementation only supports single range copy and paste operations";
+      }
+
+      var from = args.from[0];
+      var to = args.to[0];
+      var val;
+      for (var i = 0; i <= from.toRow - from.fromRow; i++) {
+        for (var j = 0; j <= from.toCell - from.fromCell; j++) {
+          if (i <= to.toRow - to.fromRow && j <= to.toCell - to.fromCell) {
+            val = data[from.fromRow + i][columns[from.fromCell + j].field];
+            data[to.fromRow + i][columns[to.fromCell + j].field] = val;
+            grid.invalidateRow(to.fromRow + i);
+          }
+        }
+      }
+      grid.render();
+    });
+
+    grid.onAddNewRow.subscribe(function (e, args) {
+      var item = args.item;
+      var column = args.column;
+      grid.invalidateRow(data.length);
+      data.push(item);
+      grid.updateRowCount();
+      grid.render();
+    });
+  
 }
 
-function setupMonac() {
+function setupMonaco() {
 
 /*
 	<script>var require = { paths: { 'vs': 'node_modules/monaco-editor/min/vs' } };</script>
@@ -319,11 +439,27 @@ function setupMonac() {
 	<script src="node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
 */
 
+    let editor = monaco.editor.create(document.getElementById("monaco_test"), {
+      value: "function hello() {\n\talert('Hello world!');\n}",
+      language: "javascript"
+    });
 
-monaco.editor.create(document.getElementById("container"), {
-	value: "function hello() {\n\talert('Hello world!');\n}",
-	language: "javascript"
-});
+
+  return;
+
+  require(["/static/libs/monaco/editor/editor.main"], function () {
+
+/*    
+    monaco.editor.create(document.getElementById("monaco_test"), {
+      value: "function hello() {\n\talert('Hello world!');\n}",
+      language: "javascript"
+    });
+*/
+  })
+  
+  return;
+
+
 
   // <div id="container" style="height:100%;"></div>
 
@@ -336,5 +472,7 @@ document.addEventListener("DOMContentLoaded", function() {
   setupDD();
   dropdownMenus();
   setupCyto();
+  setupMonaco();
+  slickgrid();
   
 });
