@@ -441,7 +441,9 @@ function setupMonaco() {
 
     let editor = monaco.editor.create(document.getElementById("monaco_test"), {
       value: "function hello() {\n\talert('Hello world!');\n}",
-      language: "javascript"
+      language: "javascript",
+      fontFamily: "IBM Plex Mono",
+      fontSize: 14
     });
 
 
@@ -467,6 +469,81 @@ function setupMonaco() {
   
 }
 
+function twgltest() {
+
+  const gl = document.getElementById("twgl_test").getContext("webgl");
+
+
+  const vs = `attribute vec4 position;
+
+void main() {
+  gl_Position = position;
+}`;
+
+  const fs = `precision mediump float;
+
+uniform vec2 resolution;
+uniform float time;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / resolution;
+  float color = 0.0;
+  // lifted from glslsandbox.com
+  color += sin( uv.x * cos( time / 3.0 ) * 60.0 ) + cos( uv.y * cos( time / 2.80 ) * 10.0 );
+  color += sin( uv.y * sin( time / 2.0 ) * 40.0 ) + cos( uv.x * sin( time / 1.70 ) * 40.0 );
+  color += sin( uv.x * sin( time / 1.0 ) * 10.0 ) + sin( uv.y * sin( time / 3.50 ) * 80.0 );
+  color *= sin( time / 10.0 ) * 0.5;
+
+  gl_FragColor = vec4( vec3( color * 0.5, sin( color + time / 2.5 ) * 0.75, color ), 1.0 );
+}`
+  
+  const programInfo = twgl.createProgramInfo(gl, [vs, fs]);
+ 
+  const arrays = {
+    position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0],
+  };
+  const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+ 
+  function render(time) {
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+ 
+    const uniforms = {
+      time: time * 0.001,
+      resolution: [gl.canvas.width, gl.canvas.height],
+    };
+ 
+    gl.useProgram(programInfo.program);
+    twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+    twgl.setUniforms(programInfo, uniforms);
+    twgl.drawBufferInfo(gl, bufferInfo);
+ 
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+  
+}
+
+function fabricTest() {
+  var el = document.getElementById('fabric_test');
+
+  var canvas = new fabric.Canvas(el, {
+    width: el.parentNode.offsetWidth,
+    height: el.parentNode.offsetHeight,
+//    width: window.innerWidth,
+//    height: window.innerWidth - 50,
+    isDrawingMode: false,
+    backgroundColor: '#fff'
+  });
+
+  canvas.add(new fabric.Rect({left: 40, top: 20, fill: '#000', width: 100, height: 100}));
+
+  canvas.add(new fabric.Circle({radius: 50, fill: '#000', left: 150, top: 20}));
+
+  canvas.setActiveObject(canvas.item(1));
+
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 
   setupDD();
@@ -474,5 +551,7 @@ document.addEventListener("DOMContentLoaded", function() {
   setupCyto();
   setupMonaco();
   slickgrid();
+  twgltest();
+  fabricTest();
   
 });

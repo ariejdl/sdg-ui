@@ -21,6 +21,8 @@
   src: url(/static/fonts/IBMPlexMono-Bold.woff2) format('woff2');
 }
 
+$default-font: 'IBM Plex Mono';
+
 @import "dropdown";
 @import "slickgrid";
 
@@ -33,7 +35,7 @@ html, body {
 
 body {
     background: rgb(34,34,34);
-    font-family: 'IBM Plex Mono';
+    font-family: $default-font;
     overflow: hidden;
     overscroll-behavior-x: none;
 }

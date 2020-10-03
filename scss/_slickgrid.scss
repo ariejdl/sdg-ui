@@ -1,4 +1,11 @@
 
+.ui-widget,
+.ui-widget input {    
+    font-family: $default-font !important;
+    font-size: 1.1em;
+}
+
+// from examples.css
 .grid-header {
   border: 1px solid gray;
   border-bottom: 0;
@@ -127,7 +134,7 @@ input.editor-percentcomplete {
   height: 100%;
   background: url("../images/pencil.gif") no-repeat center center;
   overflow: visible;
-  z-index: 1000;
+  //z-index: 1000;
   float: right;
 }
 
@@ -190,4 +197,7 @@ input.editor-checkbox {
   border: 0;
 }
 
-
+// customisations
+.slick-cell, .slick-headerrow-column {
+    z-index: auto !important;
+}

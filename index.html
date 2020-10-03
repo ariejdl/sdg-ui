@@ -2,14 +2,18 @@
 <html>
   <head>
 
-    <link rel="stylesheet" href="/static/libs/xterm.css?q=1" />
-    <link rel="stylesheet" href="/static/main.css?q=1" />
+    <!-- general libs -->
+    <link rel="stylesheet" href="/static/libs/xterm.css" />
+    <link rel="stylesheet" href="/static/main.css" />
 
-    <script src="/static/libs/d3.min.js?q=1"></script>
-    <script src="/static/libs/xterm.js?q=1"></script>
-    <script src="/static/libs/terminado.js?q=1"></script>
-    <script src="/static/libs/cytoscape.min.js?q=1"></script>
+    <script src="/static/libs/d3.min.js"></script>
+    <script src="/static/libs/xterm.js"></script>
+    <script src="/static/libs/terminado.js"></script>
+    <script src="/static/libs/cytoscape.min.js"></script>
+    <script src="/static/libs/twgl-full.min.js"></script>
+    <script src="/static/libs/fabric.min.js"></script>
 
+    <!-- slickgrid -->
     <link rel="stylesheet" href="/static/libs/SlickGrid/css/smoothness/jquery-ui-1.8.16.custom.css" />
     <link rel="stylesheet" href="/static/libs/SlickGrid/slick.grid.css" />
     <link rel="stylesheet" href="/static/libs/SlickGrid/slick-default-theme.css" />
@@ -29,14 +33,14 @@
     <script src="/static/libs/SlickGrid/slick.editors.js"></script>    
     <script src="/static/libs/SlickGrid/slick.grid.js"></script>
 
-    
-
+    <!-- monaco -->
     <script>var require = { paths: { 'vs': '/static/libs/monaco/min/vs' } };</script>
     <script src="/static/libs/monaco/min/vs/loader.js"></script>
     <script src="/static/libs/monaco/min/vs/editor/editor.main.nls.js"></script>
     <script src="/static/libs/monaco/min/vs/editor/editor.main.js"></script>
-    
-    <script type="module" src="/static/main.js?q=1"></script>
+
+    <!-- main -->
+    <script type="module" src="/static/main.js"></script>
 
   </head>
   <body>
@@ -117,9 +121,17 @@
 
     <div id="cytoscape_container"></div>
 
-    <div id="monaco_test" style="position:absolute;top:40px;right:40px;width:400px;height:400px;"></div>
+    <div id="monaco_test" style="position:absolute;top:40px;right:40px;width:400px;height:300px;"></div>
 
-    <div id="slickgrid" style="position:absolute;top:40px;right:450px;width:400px;height:400px;"></div>
+    <div id="slickgrid" style="position:absolute;top:40px;right:450px;width:400px;height:300px;"></div>
+
+    <canvas id="twgl_test" style="position:absolute;top:350px;right:40px;width:400px;height:300px;"></canvas>
+
+    <div style="position:absolute;top:350px;right:450px;width:400px;height:300px;">
+      <canvas id="fabric_test">
+      </canvas>
+    </div>
+    
     
   </body>
 </html>
