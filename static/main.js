@@ -531,17 +531,17 @@ function fabricTest() {
   var el = document.getElementById('fabric_test');
 
   var canvas = new fabric.Canvas(el, {
-    width: el.parentNode.offsetWidth,
-    height: el.parentNode.offsetHeight,
+    width: el.parentNode.offsetWidth-2,
+    height: el.parentNode.offsetHeight-2,
 //    width: window.innerWidth,
 //    height: window.innerWidth - 50,
     isDrawingMode: false,
     backgroundColor: '#fff'
   });
 
-  canvas.add(new fabric.Rect({left: 40, top: 20, fill: '#000', width: 100, height: 100}));
+  canvas.add(new fabric.Rect({left: 40, top: 20, fill: '#f00', width: 100, height: 100}));
 
-  canvas.add(new fabric.Circle({radius: 50, fill: '#000', left: 150, top: 20}));
+  canvas.add(new fabric.Circle({radius: 50, fill: '#00f', left: 150, top: 20}));
 
   canvas.setActiveObject(canvas.item(1));
 
