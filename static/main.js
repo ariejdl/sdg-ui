@@ -135,26 +135,26 @@ function setupCyto() {
           'overlay-padding': 5,
           //'background-image': 'rectangle',
           //'overlay-padding': 0,
-         'background-color': '#EFA94E' 
+         'background-color': '#333' 
         }
       },
     {
       selector: 'node',
       style: {
-        'color': 'white',
+        'color': '#333',
         'font-family': "IBM Plex Mono",
         //"font-weight": "100",
         "font-size": "14",
         
         'content': 'data(id)',
 
-        'text-outline-width': 0.5,
-        'text-outline-color': '#333',
+        'text-outline-width': 1,
+        'text-outline-color': '#e8e8e8',
         
         'text-valign': 'top',
         'text-halign': 'center',
         'shape': 'rectangle',
-        'background-color': '#eee',
+        'background-color': '#333',
 
         'ghost': 'yes',
         'ghost-offset-x': 0,
@@ -168,7 +168,7 @@ function setupCyto() {
       style: {
         'text-valign': 'top',
         'text-halign': 'center',
-        'background-color': 'white',
+        'background-color': '#333',
         'background-opacity': 0.25,
         'border-width': 0,
       }
@@ -177,13 +177,13 @@ function setupCyto() {
       selector: 'edge',
       style: {
         width: 5,
-        'color': 'white',
+        'color': '#333',
         'font-family': "IBM Plex Mono",
         //"font-weight": "100",
         "font-size": "14",
 
-        'text-outline-width': 0.5,
-        'text-outline-color': '#333',
+        'text-outline-width': 1,
+        'text-outline-color': '#e8e8e8',
         
         
         'content': 'data(id)',
@@ -193,8 +193,8 @@ function setupCyto() {
         'text-margin-y': -10,
         'text-margin-x': 0,
         
-        'line-color': '#eee',
-        'target-arrow-color': '#eee',
+        'line-color': '#333',
+        'target-arrow-color': '#333',
         'arrow-scale': 2,
         "curve-style": "unbundled-bezier",   
         'control-point-weights': '0.25 0.75',
@@ -316,6 +316,7 @@ grid.onKeyDown.subscribe(function(e) {
   var ed = Slick.Editors.Text; // FormulaEditor
   
   var columns = [
+    {id: "sel", name: "", field: "num", behavior: "select", cssClass: "cell-selection", width: 40, resizable: false, selectable: false },    
     {id: "t1", name: "Title", field: "_t1", width: 120, editor: ed }, //
     {id: "t2", name: "Title2", field: "_t2", width: 120, editor: ed },
     {id: "t3", name: "Title3", field: "_t3", width: 120, editor: ed },
@@ -377,6 +378,7 @@ grid.onKeyDown.subscribe(function(e) {
     for (var i = 0; i < 500; i++) {
       var d = (data[i] = {});
 
+      d["num"] = i + 1;
       d["_t1"] = "Task " + i;
       d["_t2"] = Math.random();
       d["_t3"] = Math.random();
@@ -443,7 +445,8 @@ function setupMonaco() {
       value: "function hello() {\n\talert('Hello world!');\n}",
       language: "javascript",
       fontFamily: "IBM Plex Mono",
-      fontSize: 14
+      fontSize: 14,
+      //theme: "vs-dark"
     });
 
 
@@ -553,5 +556,8 @@ document.addEventListener("DOMContentLoaded", function() {
   slickgrid();
   twgltest();
   fabricTest();
+
+  // prism vs themes
+  // https://github.com/JeremyJeanson/prismjs-vs
   
 });

@@ -201,3 +201,23 @@ input.editor-checkbox {
 .slick-cell, .slick-headerrow-column {
     z-index: auto !important;
 }
+
+.ui-state-default,
+.slick-header-columns,
+.slick-header-column {    
+    background: none !important;
+    background-image: none !important;
+}
+
+.cell-selection {
+    border-right-color: silver;
+    border-right-style: solid;
+    background: #f5f5f5;
+    color: gray;
+    text-align: right;
+    font-size: 10px;
+}
+
+.slick-viewport {
+    background: white;
+}
