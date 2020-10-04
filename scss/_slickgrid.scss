@@ -199,13 +199,13 @@ input.editor-checkbox {
 
 // customisations
 .slick-cell, .slick-headerrow-column {
-    z-index: auto !important;
+    z-index: 0 !important;
 }
 
 .ui-state-default,
 .slick-header-columns,
 .slick-header-column {    
-    background: none !important;
+    //background: none !important;
     background-image: none !important;
 }
 

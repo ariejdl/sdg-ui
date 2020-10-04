@@ -311,13 +311,12 @@ input.editor-checkbox {
 }
 
 .slick-cell, .slick-headerrow-column {
-  z-index: auto !important;
+  z-index: 0 !important;
 }
 
 .ui-state-default,
 .slick-header-columns,
 .slick-header-column {
-  background: none !important;
   background-image: none !important;
 }
 
@@ -358,7 +357,6 @@ h1 {
   top: 0px;
   width: 40%;
   left: 30%;
-  color: white;
   z-index: 1;
 }
 
@@ -367,6 +365,7 @@ h1 {
 }
 
 .menu-item > div {
+  color: #333;
   transition: opacity 100ms ease-in-out;
   padding: 5px;
   opacity: 0.25;
