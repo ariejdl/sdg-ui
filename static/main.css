@@ -320,6 +320,14 @@ input.editor-checkbox {
   background-image: none !important;
 }
 
+.slick-header-columns {
+  border-bottom: 0px !important;
+}
+
+.slick-header {
+  border-top: 0px !important;
+}
+
 .cell-selection {
   border-right-color: silver;
   border-right-style: solid;

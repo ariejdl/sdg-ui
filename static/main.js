@@ -104,10 +104,68 @@ function getStylesheet(url, callback) {
 
 }
 
+const _handleStyle = [            // some style for the extension
+
+  {
+    selector: '.eh-handle',
+    style: {
+      'background-color': 'red',
+      'width': 12,
+      'height': 12,
+      'shape': 'ellipse',
+      'overlay-opacity': 0,
+      'border-width': 12, // makes the handle easier to hit
+      'border-opacity': 0
+    }
+  },
+
+  {
+    selector: '.eh-hover',
+    style: {
+      'background-color': 'red'
+    }
+  },
+
+  {
+    selector: '.eh-source',
+    style: {
+      'border-width': 2,
+      'border-color': 'red'
+    }
+  },
+
+  {
+    selector: '.eh-target',
+    style: {
+      'border-width': 2,
+      'border-color': 'red'
+    }
+  },
+
+  {
+    selector: '.eh-preview, .eh-ghost-edge',
+    style: {
+      'background-color': 'red',
+      'line-color': 'red',
+      'target-arrow-color': 'red',
+      'source-arrow-color': 'red'
+    }
+  },
+
+  {
+    selector: '.eh-ghost-edge.eh-preview-active',
+    style: {
+      'opacity': 0
+    }
+  }];
+
 function setupCyto() {
 
   // TODO: snap
   // https://cytoscape.org/cytoscape.js-edgehandles/demo-snap.html
+  //cytoscape.use( cytoscapeEdgehandles );
+  //cytoscapeEdgehandles
+  //edgehandles
 
   // https://js.cytoscape.org/demos/compound-nodes/code.js
   const cy = cytoscape({
@@ -246,7 +304,8 @@ function setupCyto() {
           */
         }
       }
-  ],
+
+    ].concat(_handleStyle),
 
   elements: {
     nodes: [
@@ -274,6 +333,27 @@ function setupCyto() {
   cy.on('tap', 'edge', (evt) => {
     console.log(evt.target.id());
   });
+
+  // handles
+        var eh = cy.edgehandles({
+          snap: false,
+          snapFrequency: 15
+        });
+
+  // additional features
+  /*
+        document.querySelector('#draw-on').addEventListener('click', function() {
+          eh.enableDrawMode();
+        });
+
+        document.querySelector('#draw-off').addEventListener('click', function() {
+          eh.disableDrawMode();
+        });
+
+        document.querySelector('#start').addEventListener('click', function() {
+          eh.start( cy.$('node:selected') );
+        });  
+*/
   
 /*
 
