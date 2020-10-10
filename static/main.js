@@ -393,7 +393,7 @@ function setupCyto() {
       cont.style['height'] = '400px';
       var can = document.createElement("canvas");
       cont.appendChild(can);
-      console.log(cont, can)
+
       fabricTest(can);
     } else if (data['kind'] === "test-webgl") {
       var can = document.createElement("canvas");
@@ -412,9 +412,22 @@ function setupCyto() {
     
     // create holder
     var el = holderDiv();
-    
+    const data = evt.target.data();
+    let keysCount = 0;
+    for (const k in data) {
+      keysCount++;
+      if (keysCount > 1) {
+        break;
+      }
+    }
+
+    if (keysCount <= 1) {
+      return;
+    }
+
+    el.style['margin-left'] = '10px';
     setupConf(el);
-    setupContent(el, evt.target.data());
+    setupContent(el, data);
     
     var state = evt.target.scratch('state') || {};
     state.el = el;
