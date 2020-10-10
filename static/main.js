@@ -109,12 +109,12 @@ const _handleStyle = [            // some style for the extension
   {
     selector: '.eh-handle',
     style: {
-      'background-color': 'red',
-      'width': 12,
-      'height': 12,
+      'background-color': 'green',
+      'width': 6,
+      'height': 6,
       'shape': 'ellipse',
       'overlay-opacity': 0,
-      'border-width': 12, // makes the handle easier to hit
+      'border-width': 6, // makes the handle easier to hit
       'border-opacity': 0
     }
   },
@@ -122,7 +122,7 @@ const _handleStyle = [            // some style for the extension
   {
     selector: '.eh-hover',
     style: {
-      'background-color': 'red'
+      'background-color': 'green'
     }
   },
 
@@ -130,25 +130,25 @@ const _handleStyle = [            // some style for the extension
     selector: '.eh-source',
     style: {
       'border-width': 2,
-      'border-color': 'red'
+      'border-color': 'green'
     }
   },
 
-  {
+ /* {
     selector: '.eh-target',
     style: {
       'border-width': 2,
-      'border-color': 'red'
+      'border-color': 'green'
     }
-  },
+  },*/
 
   {
     selector: '.eh-preview, .eh-ghost-edge',
     style: {
-      'background-color': 'red',
-      'line-color': 'red',
-      'target-arrow-color': 'red',
-      'source-arrow-color': 'red'
+      'background-color': 'green',
+      'line-color': 'green',
+      'target-arrow-color': 'green',
+      'source-arrow-color': 'green'
     }
   },
 
@@ -157,15 +157,21 @@ const _handleStyle = [            // some style for the extension
     style: {
       'opacity': 0
     }
-  }];
+  }
+
+];
 
 function setupCyto() {
 
-  // TODO: snap
+  // edge handles
+  // https://github.com/cytoscape/cytoscape.js-edgehandles
   // https://cytoscape.org/cytoscape.js-edgehandles/demo-snap.html
-  //cytoscape.use( cytoscapeEdgehandles );
-  //cytoscapeEdgehandles
-  //edgehandles
+
+  // expand-collapse - this may not be necessary, may be able to hide/show children of compound node
+  // http://ivis-at-bilkent.github.io/cytoscape.js-expand-collapse/demo.html?spm=a2c6h.14275010.0.0.18881782RFC5iX
+
+  // *probably need this to make elements linked to nodes
+  // https://cytoscape.org/cytoscape.js-popper/
 
   // https://js.cytoscape.org/demos/compound-nodes/code.js
   const cy = cytoscape({
@@ -333,11 +339,19 @@ function setupCyto() {
   cy.on('tap', 'edge', (evt) => {
     console.log(evt.target.id());
   });
+ 
 
   // handles
         var eh = cy.edgehandles({
           snap: false,
-          snapFrequency: 15
+          snapFrequency: 15,
+          complete: function( sourceNode, targetNode, addedEles ){
+            // fired when edgehandles is done and elements are added
+            console.log('new', sourceNode, targetNode, addedEles)
+          },          
+          handlePosition: function( node ){
+            return 'right middle'; // sets the position of the handle in the format of "X-AXIS Y-AXIS" such as "left top", "middle top"
+          },         
         });
 
   // additional features
@@ -370,6 +384,66 @@ function setupCyto() {
 
   ]);  
 */
+
+  // popper
+
+  var makeDiv = function(content){
+    var div = document.createElement('div');
+    div.classList.add('_popper-div');
+    div.innerHTML = content;
+    document.body.appendChild( div );
+    return div;
+  };  
+
+  /*
+  cyPop.register(cytoscape)
+
+  var a = cy.getElementById('a123');
+
+  var popperA = a._popper({
+    content: function(){ return makeDiv('Sticky position div<br/>abc 123<br/>456<br/>789'); },
+    popper: {
+      placement: 'right'
+    }
+  });
+
+  console.log(popperA)
+
+  var updateA = function(){
+    console.log(popperA.refObject.getBoundingClientRect())
+  };  
+
+  a.on('position', updateA);
+  cy.on('pan zoom resize', updateA);
+  
+  return;
+  */
+
+  
+  var a = cy.getElementById('a123');
+
+  var e1 = makeDiv("special<br/>node")
+
+  var popperA = a.popperRef({
+    content: function(){
+      return e1
+    },
+    popper: {
+      placement: 'right'
+    }
+  });
+
+  var updateA = function(){
+    let rect = popperA.getBoundingClientRect();
+    e1.style['position'] = 'absolute';
+    e1.style['top'] = rect.top + 'px';
+    e1.style['left'] = (rect.left + rect.width) + 'px';
+    //popperA.scheduleUpdate();
+  };
+  
+  a.on('position', updateA);
+  cy.on('pan zoom resize', updateA);
+
 
 }
 
