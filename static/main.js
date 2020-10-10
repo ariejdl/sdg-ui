@@ -394,42 +394,15 @@ function setupCyto() {
     document.body.appendChild( div );
     return div;
   };  
-
-  /*
-  cyPop.register(cytoscape)
-
-  var a = cy.getElementById('a123');
-
-  var popperA = a._popper({
-    content: function(){ return makeDiv('Sticky position div<br/>abc 123<br/>456<br/>789'); },
-    popper: {
-      placement: 'right'
-    }
-  });
-
-  console.log(popperA)
-
-  var updateA = function(){
-    console.log(popperA.refObject.getBoundingClientRect())
-  };  
-
-  a.on('position', updateA);
-  cy.on('pan zoom resize', updateA);
-  
-  return;
-  */
-
   
   var a = cy.getElementById('a123');
 
   var e1 = makeDiv("special<br/>node")
 
+  // create as need!
   var popperA = a.popperRef({
     content: function(){
       return e1
-    },
-    popper: {
-      placement: 'right'
     }
   });
 
@@ -443,6 +416,12 @@ function setupCyto() {
   
   a.on('position', updateA);
   cy.on('pan zoom resize', updateA);
+
+  setTimeout(function() {
+    // set content
+    e1.innerHTML = "";
+  }, 5000);
+
 
 
 }
