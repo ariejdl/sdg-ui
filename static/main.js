@@ -332,13 +332,65 @@ function setupCyto() {
 
   });
 
+  var holderDiv = function() {
+    var div = document.createElement('div');
+    document.body.appendChild( div );
+    return div;
+  };  
+
+  function updateAll() {
+    const updateNodes = cy.scratch('update_nodes') || {};
+    const updateEdges = cy.scratch('update_edges') || {};
+    
+    for (const k in updateNodes) {
+      updateNodes[k]();
+    }
+  }  
+
+  cy.on('pan zoom resize', updateAll);
+
   cy.on('tap', 'node', (evt) => {
-    console.log(evt.target.id());
+    // create holder
+    var el = holderDiv();
+    el.innerHTML = "testing";
+    var state = evt.target.scratch('state') || {};
+    state.el = el;
+    evt.target.scratch('state', state);
+    var ref = evt.target.popperRef({
+      content: () => el
+    });
+    function update() {
+      let rect = ref.getBoundingClientRect();
+      el.style['position'] = 'absolute';
+      el.style['top'] = rect.top + 'px';
+      el.style['left'] = (rect.left + rect.width) + 'px';
+    }
+    update();
+    evt.target.on('position', update);
+
+    // update all visible
+    var updateNodes = cy.scratch('update_nodes') || {};
+    updateNodes[evt.target.id()] = update;
+    cy.scratch('update_nodes', updateNodes);
   });
 
   cy.on('tap', 'edge', (evt) => {
+    // nothing for edges
     console.log(evt.target.id());
   });
+
+  cy.on('unselect', 'node', (evt) => {
+    // clear holder
+    var el = (evt.target.scratch('state') || {}).el;
+    if (el) {
+      el.parentNode.removeChild(el);
+    }
+    evt.target.unbind('position');
+    
+    var updateNodes = cy.scratch('update_nodes') || {};
+    delete updateNodes[evt.target.id()];
+    cy.scratch('update_nodes', updateNodes);
+  });  
  
 
   // handles
@@ -387,40 +439,6 @@ function setupCyto() {
 
   // popper
 
-  var makeDiv = function(content){
-    var div = document.createElement('div');
-    div.classList.add('_popper-div');
-    div.innerHTML = content;
-    document.body.appendChild( div );
-    return div;
-  };  
-  
-  var a = cy.getElementById('a123');
-
-  var e1 = makeDiv("special<br/>node")
-
-  // create as need!
-  var popperA = a.popperRef({
-    content: function(){
-      return e1
-    }
-  });
-
-  var updateA = function(){
-    let rect = popperA.getBoundingClientRect();
-    e1.style['position'] = 'absolute';
-    e1.style['top'] = rect.top + 'px';
-    e1.style['left'] = (rect.left + rect.width) + 'px';
-    //popperA.scheduleUpdate();
-  };
-  
-  a.on('position', updateA);
-  cy.on('pan zoom resize', updateA);
-
-  setTimeout(function() {
-    // set content
-    e1.innerHTML = "";
-  }, 5000);
 
 
 
