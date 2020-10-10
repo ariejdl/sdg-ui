@@ -210,7 +210,7 @@ function setupCyto() {
         //"font-weight": "100",
         "font-size": "14",
         
-        'content': 'data(id)',
+        'content': 'data(name)',
 
         'text-outline-width': 1,
         'text-outline-color': '#e8e8e8',
@@ -250,7 +250,7 @@ function setupCyto() {
         'text-outline-color': '#e8e8e8',
         
         
-        'content': 'data(id)',
+        'content': 'data(name)',
         
         'text-valign': 'top',
         'text-halign': 'center',
@@ -315,17 +315,16 @@ function setupCyto() {
 
   elements: {
     nodes: [
-      { data: { id: 'a123', parent: 'b' }, position: { x: 215, y: 85 } },
+      { data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' }, position: { x: 215, y: 85 } },
       { data: { id: 'b' } },
-      { data: { id: 'c', parent: 'b' }, position: { x: 300, y: 85 } },
-      { data: { id: 'd' }, position: { x: 215, y: 175 } },
+      { data: { id: 'c', kind: 'code', name: 'code', parent: 'b' }, position: { x: 300, y: 85 } },
+      { data: { id: 'd', kind: 'test-webgl', name: 'WebGL' }, position: { x: 215, y: 175 } },
       { data: { id: 'e' } },
-      { data: { id: 'f', parent: 'e' }, position: { x: 300, y: 175 } }
+      { data: { id: 'f', parent: 'e', kind: 'test-draw', name: 'Draw' }, position: { x: 300, y: 175 } }
     ],
     edges: [
-      { data: { id: 'ad', source: 'a123', target: 'd' } },
+      { data: { id: 'ad', name: 'peter', source: 'a123', target: 'd' } },
       { data: { id: 'eb', source: 'e', target: 'b' } }
-
     ]
   },
 
@@ -349,10 +348,74 @@ function setupCyto() {
 
   cy.on('pan zoom resize', updateAll);
 
+  function setupConf(el) {
+    var conf = document.createElement("div");
+    conf.classList.add("basic-box");
+    conf['style']['margin-top'] = '-100px';
+    conf['style']['background'] = 'white';
+    conf['style']['padding'] = '5px';
+    // name, kind, expand collapse, show
+    ['name', 'kind', 'expand/collapse', 'show/fullscreen/pin'].forEach((name) => {
+      var row = document.createElement("div");
+      row.innerHTML = name;
+      conf.appendChild(row);
+    });
+    el.appendChild(conf);
+  }
+
+  function setupContent(el, data) {
+    
+    if (data['kind'] === "grid") {
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.style['margin-top'] = '10px';
+      el.appendChild(cont);
+      
+      cont.style['width'] = '400px';
+      cont.style['height'] = '400px';
+      slickgrid(cont);
+    } else if (data['kind'] === "code") {
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.style['margin-top'] = '10px';
+      el.appendChild(cont);
+      
+      cont.style['width'] = '400px';
+      cont.style['height'] = '400px';
+      setupMonaco(cont);
+    } else if (data['kind'] === "test-draw") {
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.style['margin-top'] = '10px';
+      el.appendChild(cont);
+      
+      cont.style['width'] = '400px';
+      cont.style['height'] = '400px';
+      var can = document.createElement("canvas");
+      cont.appendChild(can);
+      console.log(cont, can)
+      fabricTest(can);
+    } else if (data['kind'] === "test-webgl") {
+      var can = document.createElement("canvas");
+      can.classList.add("basic-box");
+      can.style['margin-top'] = '10px';
+      can.style['width'] = '400px';
+      can.style['height'] = '400px';
+      
+      el.appendChild(can);
+      twgltest(can);
+    }
+  }
+
   cy.on('tap', 'node', (evt) => {
+    // TODO: refresh all visible, remove if not visible
+    
     // create holder
     var el = holderDiv();
-    el.innerHTML = "testing";
+    
+    setupConf(el);
+    setupContent(el, evt.target.data());
+    
     var state = evt.target.scratch('state') || {};
     state.el = el;
     evt.target.scratch('state', state);
@@ -444,7 +507,7 @@ function setupCyto() {
 
 }
 
-function slickgrid() {
+function slickgrid(el) {
   // https://mleibman.github.io/SlickGrid/examples/
   // https://mleibman.github.io/SlickGrid/examples/example-spreadsheet.html
   // https://mleibman.github.io/SlickGrid/examples/example3a-compound-editors.html
@@ -536,7 +599,7 @@ grid.onKeyDown.subscribe(function(e) {
       d["_t4"] = Math.random();
     }
 
-    grid = new Slick.Grid("#slickgrid", data, columns, options);
+    grid = new Slick.Grid(el, data, columns, options);
 
     grid.onValidationError.subscribe(function (e, args) {
       alert(args.validationResults.msg);
@@ -583,7 +646,7 @@ grid.onKeyDown.subscribe(function(e) {
   
 }
 
-function setupMonaco() {
+function setupMonaco(el) {
 
 /*
 	<script>var require = { paths: { 'vs': 'node_modules/monaco-editor/min/vs' } };</script>
@@ -592,7 +655,7 @@ function setupMonaco() {
 	<script src="node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
 */
 
-    let editor = monaco.editor.create(document.getElementById("monaco_test"), {
+    let editor = monaco.editor.create(el, {
       value: "function hello() {\n\talert('Hello world!');\n}",
       language: "javascript",
       fontFamily: "IBM Plex Mono",
@@ -623,9 +686,9 @@ function setupMonaco() {
   
 }
 
-function twgltest() {
+function twgltest(el) {
 
-  const gl = document.getElementById("twgl_test").getContext("webgl");
+  const gl = el.getContext("webgl");
 
 
   const vs = `attribute vec4 position;
@@ -678,9 +741,7 @@ void main() {
   
 }
 
-function fabricTest() {
-  var el = document.getElementById('fabric_test');
-
+function fabricTest(el) {
   var canvas = new fabric.Canvas(el, {
     width: el.parentNode.offsetWidth-2,
     height: el.parentNode.offsetHeight-2,
@@ -703,10 +764,10 @@ document.addEventListener("DOMContentLoaded", function() {
   setupDD();
   dropdownMenus();
   setupCyto();
-  setupMonaco();
-  slickgrid();
-  twgltest();
-  fabricTest();
+  //setupMonaco(document.getElementById("monaco_test"));
+  //slickgrid(document.getElementById("slickgrid"));
+  //twgltest(document.getElementById("twgl_test"));
+  //fabricTest(document.getElementById('fabric_test'));
 
   // prism vs themes
   // https://github.com/JeremyJeanson/prismjs-vs

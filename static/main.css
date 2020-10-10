@@ -345,6 +345,10 @@ input.editor-checkbox {
   background: inherit !important;
 }
 
+.slick-cell, .slick-headerrow-column {
+  border-right: 1px solid silver !important;
+}
+
 html, body {
   width: 100%;
   height: 100%;

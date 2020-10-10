@@ -233,3 +233,7 @@ input.editor-checkbox {
 .slick-row.odd {
     background: inherit !important;
 }
+
+.slick-cell, .slick-headerrow-column {
+    border-right: 1px solid silver !important
+}
