@@ -206,7 +206,7 @@ function setupCyto() {
       selector: 'node',
       style: {
         'color': '#333',
-        'font-family': "IBM Plex Mono",
+        'font-family': "Open Sans",
         //"font-weight": "100",
         "font-size": "14",
         
@@ -242,7 +242,7 @@ function setupCyto() {
       style: {
         width: 5,
         'color': '#333',
-        'font-family': "IBM Plex Mono",
+        'font-family': "Open Sans",
         //"font-weight": "100",
         "font-size": "14",
 
@@ -440,6 +440,8 @@ function setupCyto() {
       el.style['position'] = 'absolute';
       el.style['top'] = rect.top + 'px';
       el.style['left'] = (rect.left + rect.width) + 'px';
+      el.style['transform'] = `scale(${Math.min(1, cy.zoom())})`;
+      el.style['transform-origin'] = 'left top';
     }
     update();
     evt.target.on('position', update);
@@ -661,41 +663,13 @@ grid.onKeyDown.subscribe(function(e) {
 
 function setupMonaco(el) {
 
-/*
-	<script>var require = { paths: { 'vs': 'node_modules/monaco-editor/min/vs' } };</script>
-	<script src="node_modules/monaco-editor/min/vs/loader.js"></script>
-	<script src="node_modules/monaco-editor/min/vs/editor/editor.main.nls.js"></script>
-	<script src="node_modules/monaco-editor/min/vs/editor/editor.main.js"></script>
-*/
-
     let editor = monaco.editor.create(el, {
       value: "function hello() {\n\talert('Hello world!');\n}",
       language: "javascript",
-      fontFamily: "IBM Plex Mono",
+      fontFamily: "Roboto Mono",
       fontSize: 14,
       //theme: "vs-dark"
     });
-
-
-  return;
-
-  require(["/static/libs/monaco/editor/editor.main"], function () {
-
-/*    
-    monaco.editor.create(document.getElementById("monaco_test"), {
-      value: "function hello() {\n\talert('Hello world!');\n}",
-      language: "javascript"
-    });
-*/
-  })
-  
-  return;
-
-
-
-  // <div id="container" style="height:100%;"></div>
-
-
   
 }
 
