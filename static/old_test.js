@@ -9,14 +9,19 @@ ws.onmessage = function (evt) {
   console.log(evt.data);
 };
 
-function simpleTerm() {
+export function simpleTerm(parent) {
   // TODO: calculate pixel size given font size
   var term = document.createElement("div");
   term.className = "xterm";
-  term.style.width = "300px";
-  term.style.height = "100px";
-  document.body.appendChild(term);
-  make_terminal(term, { cols: 40, rows: 10 }, "ws://" + BASE_URL + "/terminals/websocket/1");    
+  //term.style.position = "absolute";
+  term.style.width = "811px";
+  term.style.height = "171px";
+  parent.appendChild(term);
+  make_terminal(
+    term,
+    { cols: 90, rows: 10 },
+    "ws://" + BASE_URL + "/terminals/websocket/1"
+  );
 }
 
 // file tests
@@ -65,10 +70,11 @@ fetch(HOST_URL + "/api/contents/")
       });
   });
 
-
+/*
 document.addEventListener('DOMContentLoaded', function() {
   simpleTerm()
 });
+*/
 
 /* treat this as a kind of unit test for back-end to begin with */
 
@@ -82,7 +88,8 @@ var uuid = function () {
     s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
   }
   s[12] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
-  s[16] = hexDigits.substr((s[16] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
+   // bits 6-7 of the clock_seq_hi_and_reserved to 01
+  s[16] = hexDigits.substr((s[16] & 0x3) | 0x8, 1); 
 
   var uuid = s.join("");
   return uuid;
@@ -97,19 +104,55 @@ function wsKernel(kernelID) {
     // https://jupyter-client.readthedocs.io/en/stable/messaging.html
     // "username" and "session" keys seem to be optional but must be null for julia
 
-    ws.send(JSON.stringify({"header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"kernel_info_request","version":"5.2"},"metadata":{},"content":{},"buffers":[],"parent_header":{},"channel":"shell"}))
+    ws.send(JSON.stringify({
+      "header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"kernel_info_request","version":"5.2"},
+      "metadata":{},
+      "content":{},
+      "buffers":[],
+      "parent_header":{},
+      "channel":"shell"}))
 
-    ws.send(JSON.stringify({"header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"comm_info_request","version":"5.2"},"metadata":{},"content":{"target_name":"jupyter.widget"},"buffers":[],"parent_header":{},"channel":"shell"}));
+    ws.send(JSON.stringify({
+      "header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"comm_info_request","version":"5.2"},
+      "metadata":{},
+      "content":{
+        "target_name":"jupyter.widget"},
+      "buffers":[],
+      "parent_header":{},
+      "channel":"shell"}));
 
-    ws.send(JSON.stringify({"header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"execute_request","version":"5.2"},"metadata":{},"content":{"code":"a = 2","silent":false,"store_history":true,"user_expressions":{},"allow_stdin":true,"stop_on_error":true},"buffers":[],"parent_header":{},"channel":"shell"}));
+    var id_x = uuid();
+    console.log('-', id_x);
+    ws.send(JSON.stringify({
+      "header":{"msg_id":id_x,"username":null,"session":null,"msg_type":"execute_request","version":"5.2"},
+      "metadata":{},
+      "content":{
+        "code":"a = 2",
+        "silent":false,
+        "store_history":true,"user_expressions":{},"allow_stdin":true,"stop_on_error":true},
+      "buffers":[],
+      "parent_header":{},
+      "channel":"shell"}));
 
-    ws.send(JSON.stringify({"header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"execute_request","version":"5.2"},"metadata":{},"content":{"code":"print(a);print('hello from python')","silent":false,"store_history":true,"user_expressions":{},"allow_stdin":true,"stop_on_error":true},"buffers":[],"parent_header":{},"channel":"shell"}));
+    var id_y = uuid();
+    console.log('-', id_y);
+    ws.send(JSON.stringify({
+      "header":{"msg_id":id_y,"username":null,"session":null,"msg_type":"execute_request","version":"5.2"},
+      "metadata":{},
+      "content":{
+        "code":"print(a);print('hello from python')",
+        "silent":false,
+        "store_history":true,"user_expressions":{},"allow_stdin":true,"stop_on_error":true},
+      "buffers":[],
+      "parent_header":{},
+      "channel":"shell"}));
 
   };
   ws.onmessage = function (evt) {
     if (evt.data && evt.data.length > 1e5)
       throw "too long";
     var res = (JSON.parse(evt.data));
+    console.log('*', res)
     if (res.content && res.content.text) {
       console.log('kernel response:', res.content.text)
     }

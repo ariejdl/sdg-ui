@@ -1,5 +1,5 @@
 
-
+import { simpleTerm } from "./old_test.js";
 import { test } from "./test.js";
 
 test();
@@ -109,13 +109,14 @@ const _handleStyle = [            // some style for the extension
   {
     selector: '.eh-handle',
     style: {
-      'background-color': 'green',
+      'background-color': 'white',
       'width': 6,
       'height': 6,
       'shape': 'ellipse',
       'overlay-opacity': 0,
-      'border-width': 6, // makes the handle easier to hit
-      'border-opacity': 0
+      'border-width': 2, // makes the handle easier to hit
+      'border-opacity': 1,
+      'border-color': 'green'
     }
   },
 
@@ -315,12 +316,14 @@ function setupCyto() {
 
   elements: {
     nodes: [
-      { data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' }, position: { x: 215, y: 85 } },
+      { data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' } },
       { data: { id: 'b' } },
-      { data: { id: 'c', kind: 'code', name: 'code', parent: 'b' }, position: { x: 300, y: 85 } },
-      { data: { id: 'd', kind: 'test-webgl', name: 'WebGL' }, position: { x: 215, y: 175 } },
+      { data: { id: 'c', kind: 'code', name: 'code', parent: 'b' } },
+      { data: { id: 'd', kind: 'test-webgl', name: 'WebGL' }, },
       { data: { id: 'e' } },
-      { data: { id: 'f', parent: 'e', kind: 'test-draw', name: 'Draw' }, position: { x: 300, y: 175 } }
+      { data: { id: 'f', parent: 'e', kind: 'test-draw', name: 'Draw' } },
+      { data: { id: 'g', parent: 'e', kind: 'terminal', name: 'Terminal' } },
+      { data: { id: 'h', parent: 'e', kind: 'notebook', name: 'Notebook' } }
     ],
     edges: [
       { data: { id: 'ad', name: 'peter', source: 'a123', target: 'd' } },
@@ -404,6 +407,20 @@ function setupCyto() {
       
       el.appendChild(can);
       twgltest(can);
+    } else if (data['kind'] === "terminal") {
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.style['margin-top'] = '10px';
+      el.appendChild(cont);
+      
+      simpleTerm(cont);
+    } else if (data['kind'] === "notebook") {
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.style['margin-top'] = '10px';
+      el.appendChild(cont);
+
+      cont.innerHTML = "testing1<br/>testing2<br/>testing3";
     }
   }
 
@@ -497,7 +514,11 @@ function setupCyto() {
         document.querySelector('#start').addEventListener('click', function() {
           eh.start( cy.$('node:selected') );
         });  
-*/
+  */
+
+  // programmatically select
+  cy.nodes()[0].select()
+  cy.nodes()[0].trigger("tap")
   
 /*
 
