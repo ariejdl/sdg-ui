@@ -18,13 +18,14 @@
   font-style: normal;
   font-weight: 700;
   src: url(/static/fonts/IBMPlexMono-Bold.woff2) format('woff2');
-}*/
+}
+
 @font-face {
-  font-family: "Playfair";
+  font-family: 'Playfair';
   font-style: normal;
   font-weight: 400;
-  src: url(/static/fonts/PlayfairDisplay-VariableFont_wght.woff2) format("woff2");
-}
+  src: url(/static/fonts/PlayfairDisplay-VariableFont_wght.woff2) format('woff2');
+}*/
 @font-face {
   font-family: "Open Sans";
   font-style: normal;
@@ -368,6 +369,25 @@ input.editor-checkbox {
 
 .slick-cell, .slick-headerrow-column {
   border-right: 1px solid silver !important;
+}
+
+/*
+toggle
+
+https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
+*/
+.toggle {
+  height: 9px;
+  width: 9px;
+  display: inline-block;
+}
+
+.toggle.expand {
+  background: blue;
+}
+
+.toggle.collapse {
+  background: red;
 }
 
 html, body {

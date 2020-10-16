@@ -312,27 +312,44 @@ function setupCyto() {
         }
       }
 
-    ].concat(_handleStyle),
-
-  elements: {
-    nodes: [
-      { data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' } },
-      { data: { id: 'b' } },
-      { data: { id: 'c', kind: 'code', name: 'code', parent: 'b' } },
-      { data: { id: 'd', kind: 'test-webgl', name: 'WebGL' }, },
-      { data: { id: 'e' } },
-      { data: { id: 'f', parent: 'e', kind: 'test-draw', name: 'Draw' } },
-      { data: { id: 'g', parent: 'e', kind: 'terminal', name: 'Terminal' } },
-      { data: { id: 'h', parent: 'e', kind: 'notebook', name: 'Notebook' } }
-    ],
-    edges: [
-      { data: { id: 'ad', name: 'peter', source: 'a123', target: 'd' } },
-      { data: { id: 'eb', source: 'e', target: 'b' } }
-    ]
-  },
+    ].concat(_handleStyle)
 
 
   });
+
+  cy.add([
+    { group: 'nodes',
+      data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' },
+      position: { x: 400, y: 500 } },
+    { group: 'nodes',
+      data: { id: 'a124', kind: 'tree', parent: 'b', name: 'tree' },
+      position: { x: 500, y: 600 } },
+    { group: 'nodes',
+      data: { id: 'b' } },
+    { group: 'nodes',
+      data: { id: 'c', kind: 'code', name: 'code', parent: 'b' },
+      position: { x: 300, y: 400 } },
+    { group: 'nodes',
+      data: { id: 'd', kind: 'test-webgl', name: 'WebGL' },
+      position: { x: 100, y: 500 } },
+    { group: 'nodes',
+      data: { id: 'e' },
+      position: { x: 200, y: 100 } },
+    { group: 'nodes',
+      data: { id: 'f', parent: 'e', kind: 'test-draw', name: 'Draw' },
+      position: { x: 150, y: 100 } },
+    { group: 'nodes',
+      data: { id: 'g', parent: 'e', kind: 'terminal', name: 'Terminal' },
+      position: { x: 300, y: 100 } },
+    { group: 'nodes',
+      data: { id: 'h', parent: 'e', kind: 'notebook', name: 'Notebook' },
+      position: { x: 450, y: 100 } },
+    
+    { group: 'edges',
+      data: { id: 'ad', name: 'peter', source: 'a123', target: 'd' } },
+    { group: 'edges',
+      data: { id: 'eb', source: 'e', target: 'b' } }
+  ]);
 
   var holderDiv = function() {
     var div = document.createElement('div');
@@ -377,6 +394,15 @@ function setupCyto() {
       cont.style['width'] = '400px';
       cont.style['height'] = '400px';
       slickgrid(cont);
+    } else if (data['kind'] === "tree") {
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.style['margin-top'] = '10px';
+      el.appendChild(cont);
+      
+      cont.style['width'] = '400px';
+      cont.style['height'] = '400px';
+      slickgridTree(cont);
     } else if (data['kind'] === "code") {
       var cont = document.createElement("div");
       cont.classList.add("basic-box");
@@ -489,17 +515,17 @@ function setupCyto() {
  
 
   // handles
-        var eh = cy.edgehandles({
-          snap: false,
-          snapFrequency: 15,
-          complete: function( sourceNode, targetNode, addedEles ){
-            // fired when edgehandles is done and elements are added
-            console.log('new', sourceNode, targetNode, addedEles)
-          },          
-          handlePosition: function( node ){
-            return 'right middle'; // sets the position of the handle in the format of "X-AXIS Y-AXIS" such as "left top", "middle top"
-          },         
-        });
+  var eh = cy.edgehandles({
+    snap: false,
+    snapFrequency: 15,
+    complete: function( sourceNode, targetNode, addedEles ){
+      // fired when edgehandles is done and elements are added
+      console.log('new', sourceNode, targetNode, addedEles)
+    },          
+    handlePosition: function( node ){
+      return 'right middle'; // sets the position of the handle in the format of "X-AXIS Y-AXIS" such as "left top", "middle top"
+    },         
+  });
 
   // additional features
   /*
@@ -517,30 +543,187 @@ function setupCyto() {
   */
 
   // programmatically select
-  cy.nodes()[0].select()
-  cy.nodes()[0].trigger("tap")
   
-/*
+  cy.nodes()[1].select()
+  cy.nodes()[1].trigger("tap")
 
-  cy.add({
-    group: 'nodes',
-    data: { weight: 75 },
-    position: { x: 200, y: 250 }
+
+
+}
+
+function slickgridTree(el) {
+
+  function requiredFieldValidator(value) {
+    if (value == null || value == undefined || !value.length) {
+      return {valid: false, msg: "This is a required field"};
+    } else {
+      return {valid: true, msg: null};
+    }
+  }
+
+
+  var TaskNameFormatter = function (row, cell, value, columnDef, dataContext) {
+    value = value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
+    var idx = dataView.getIdxById(dataContext.id);
+    if (data[idx + 1] && data[idx + 1].indent > data[idx].indent) {
+      if (dataContext._collapsed) {
+        return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
+      } else {
+        return spacer + " <span class='toggle collapse'></span>&nbsp;" + value;
+      }
+    } else {
+      return spacer + " <span class='toggle'></span>&nbsp;" + value;
+    }
+  };
+
+  var dataView;
+  var grid;
+  var data = [];
+  
+  var columns = [
+    {id: "title", name: "Title", field: "title", width: 220, cssClass: "cell-title", formatter: TaskNameFormatter, editor: Slick.Editors.Text, validator: requiredFieldValidator},
+    {id: "duration", name: "Duration", field: "duration", editor: Slick.Editors.Text},
+    //{id: "%", name: "% Complete", field: "percentComplete", width: 80, resizable: false, formatter: Slick.Formatters.PercentCompleteBar, editor: Slick.Editors.PercentComplete},
+    //{id: "start", name: "Start", field: "start", minWidth: 60, editor: Slick.Editors.Date},
+    //{id: "finish", name: "Finish", field: "finish", minWidth: 60, editor: Slick.Editors.Date},
+    //{id: "effort-driven", name: "Effort Driven", width: 80, minWidth: 20, maxWidth: 80, cssClass: "cell-effort-driven", field: "effortDriven", formatter: Slick.Formatters.Checkmark, editor: Slick.Editors.Checkbox, cannotTriggerInsert: true}
+  ];
+
+  var options = {
+    editable: true,
+    enableAddRow: false,
+    enableCellNavigation: true,
+    asyncEditorLoading: false
+  };
+
+  function myFilter(item) {
+
+    /*
+    if (item["percentComplete"] < percentCompleteThreshold) {
+      return false;
+    }
+
+    if (searchString != "" && item["title"].indexOf(searchString) == -1) {
+      return false;
+    }
+    */
+
+    if (item.parent_obj !== null) {
+      var parent = item.parent_obj;
+
+      while (parent) {
+
+        // + other filters
+        if (parent._collapsed) {
+          return false;
+        }
+
+        parent = parent.parent_obj;
+      }
+    }
+
+    return true;
+  }  
+
+  var percentCompleteThreshold = 0;
+  var searchString = "";
+
+  var indent = 0;
+  var parents = [];
+
+  // prepare the data
+  for (var i = 0; i < 1000; i++) {
+    var d = (data[i] = {});
+    var parent;
+
+    if (Math.random() > 0.8 && i > 0) {
+      indent++;
+      parents.push(i - 1);
+    } else if (Math.random() < 0.3 && indent > 0) {
+      indent--;
+      parents.pop();
+    } 
+    
+    if (parents.length > 0) {
+      parent = parents[parents.length - 1];
+    } else {
+      parent = null;
+    }
+
+    d["id"] = "id_" + i;
+    d["indent"] = indent;
+    d["parent"] = parent;
+    d["title"] = "Task " + i;
+    d["effortDriven"] = (i % 5 == 0);
+  }
+
+  for (var i = 0; i < data.length; i++) {
+    var obj = data[i];
+    if (obj.parent !== null) {
+      obj.parent_obj = data[obj.parent];
+    }
+  }
+
+
+  // initialize the model
+  dataView = new Slick.Data.DataView({ inlineFilters: true });
+  dataView.beginUpdate();
+  dataView.setItems(data);
+  dataView.setFilter(myFilter);
+  dataView.endUpdate();
+
+  // initialize the grid
+  grid = new Slick.Grid(el, dataView, columns, options);
+
+  grid.onCellChange.subscribe(function (e, args) {
+    dataView.updateItem(args.item.id, args.item);
   });
 
-  var eles = cy.add([
-    { group: 'nodes', data: { id: 'n0', type: 'bezier' }, position: { x: 100, y: 100 } },
-    { group: 'nodes', data: { id: 'n1' }, position: { x: 200, y: 200 } },
-    { group: 'edges', data: { id: 'e0', source: 'n0', target: 'n1' } },
+  grid.onAddNewRow.subscribe(function (e, args) {
+    var item = {
+      "id": "new_" + (Math.round(Math.random() * 10000)),
+      "indent": 0,
+      "title": "New task",
+      "duration": "1 day",
+      "percentComplete": 0,
+      "start": "01/01/2009",
+      "finish": "01/01/2009",
+      "effortDriven": false};
+    $.extend(item, args.item);
+    dataView.addItem(item);
+  });
 
-  ]);  
-*/
+  grid.onClick.subscribe(function (e, args) {
+    if ($(e.target).hasClass("toggle")) {
+      var item = dataView.getItem(args.row);
+      if (item) {
+        if (!item._collapsed) {
+          item._collapsed = true;
+        } else {
+          item._collapsed = false;
+        }
 
-  // popper
+        dataView.updateItem(item.id, item);
+      }
+      e.stopImmediatePropagation();
+    }
+  });
 
 
+  // wire up model events to drive the grid
+  dataView.onRowCountChanged.subscribe(function (e, args) {
+    grid.updateRowCount();
+    grid.render();
+  });
 
+  dataView.onRowsChanged.subscribe(function (e, args) {
+    grid.invalidateRows(args.rows);
+    grid.render();
+  });
 
+  
+  
 }
 
 function slickgrid(el) {
@@ -555,7 +738,10 @@ grid.onKeyDown.subscribe(function(e) {
       // open modal window
    }
 });
-*/
+  */
+
+  // tree view
+  // https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
 
   // https://github.com/myliang/x-spreadsheet
 
