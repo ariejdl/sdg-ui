@@ -1,5 +1,5 @@
 
-import { simpleTerm } from "./old_test.js";
+import { uuid, simpleTerm } from "./old_test.js";
 import { test } from "./test.js";
 
 test();
@@ -7,14 +7,14 @@ test();
 function previewFile(file) {
   let reader = new FileReader()
   reader.onload = function(e) {
-    console.log(e.target.result);
+    console.log(e.target.result.substring(0,10));
   }
   reader.readAsText(file);
 }
 
 // ?
 // https://www.smashingmagazine.com/2018/01/drag-drop-file-uploader-vanilla-js/
-function setupDD() {
+function setupDD(cy) {
 
   d3.select(document.body)
     .on('dragenter', (e) => {
@@ -36,8 +36,17 @@ function setupDD() {
       files = [...files]
       files.forEach(previewFile)
       e.preventDefault();
-    })
 
+      // TODO: make position exact
+
+      cy.add([
+        { group: 'nodes',
+          data: { id: uuid(), kind: 'grid', parent: 'b', name: 'grid' },
+          renderedPosition: { x: e.clientX, y: e.clientY }
+        }
+      ])
+      
+    })
   
 }
 
@@ -500,7 +509,7 @@ function setupCyto() {
     console.log(evt.target.id());
   });
 
-  cy.on('unselect', 'node', (evt) => {
+  const remove = (evt) => {
     // clear holder
     var el = (evt.target.scratch('state') || {}).el;
     if (el) {
@@ -511,8 +520,32 @@ function setupCyto() {
     var updateNodes = cy.scratch('update_nodes') || {};
     delete updateNodes[evt.target.id()];
     cy.scratch('update_nodes', updateNodes);
-  });  
- 
+  }
+
+  cy.on('remove', 'node', remove);
+  cy.on('unselect', 'node', remove);
+
+  cy.on('keydown', (evt) => {
+    console.log('keydown')
+  })
+
+  cy.on('add', 'node', (evt) => {
+    console.log('->>', evt.target.json(), evt.target.data())
+  });
+
+  cy.on('move', 'node', (evt) => {
+
+  });
+
+  cy.on('move', 'edge', (evt) => {
+
+  });
+
+  cy.on('update', 'node', (evt) => {
+    console.log('* update *', evt.target.id())
+  });
+
+  // TODO: if parent is moved, child is also moved in location, so popup needs to move
 
   // handles
   var eh = cy.edgehandles({
@@ -520,10 +553,14 @@ function setupCyto() {
     snapFrequency: 15,
     complete: function( sourceNode, targetNode, addedEles ){
       // fired when edgehandles is done and elements are added
-      console.log('new', sourceNode, targetNode, addedEles)
+      console.log('new edge', sourceNode, targetNode, addedEles)
+
+      sourceNode.trigger('update')
+      targetNode.trigger('update')
+      
     },          
-    handlePosition: function( node ){
-      return 'right middle'; // sets the position of the handle in the format of "X-AXIS Y-AXIS" such as "left top", "middle top"
+    handlePosition: function(node) {
+      return 'right middle';
     },         
   });
 
@@ -544,11 +581,10 @@ function setupCyto() {
 
   // programmatically select
   
-  cy.nodes()[1].select()
-  cy.nodes()[1].trigger("tap")
+  cy.$("#a124").select()
+  cy.$("#a124").trigger("tap")
 
-
-
+  return cy;
 }
 
 function slickgridTree(el) {
@@ -591,7 +627,7 @@ function slickgridTree(el) {
   ];
 
   var options = {
-    editable: true,
+    editable: false,
     enableAddRow: false,
     enableCellNavigation: true,
     asyncEditorLoading: false
@@ -828,7 +864,7 @@ grid.onKeyDown.subscribe(function(e) {
     });
   //  })
 
-     grid.setSelectionModel(new Slick.CellSelectionModel());
+  grid.setSelectionModel(new Slick.CellSelectionModel());
     grid.registerPlugin(new Slick.AutoTooltips());
 
     // set keyboard focus on the grid
@@ -955,9 +991,21 @@ function fabricTest(el) {
 
 document.addEventListener("DOMContentLoaded", function() {
 
-  setupDD();
   dropdownMenus();
-  setupCyto();
+  const cy = setupCyto();
+
+  setupDD(cy);
+
+  document.addEventListener('keydown', event => {
+    if (event.key === "x") {
+      const sel = cy.$(':selected');
+      const len = sel.length
+      if (len && confirm(`Do you wish to delete ${len} node(s)/edges(s)?`)) {
+        sel.remove();
+      }
+    }
+  });
+  
   //setupMonaco(document.getElementById("monaco_test"));
   //slickgrid(document.getElementById("slickgrid"));
   //twgltest(document.getElementById("twgl_test"));

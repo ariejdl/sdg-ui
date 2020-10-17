@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* treat this as a kind of unit test for back-end to begin with */
 
-var uuid = function () {
+export function uuid() {
   /**
    * http://www.ietf.org/rfc/rfc4122.txt
    */
