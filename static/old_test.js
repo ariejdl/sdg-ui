@@ -1,13 +1,6 @@
 
 var BASE_URL = "localhost:8001";
 var HOST_URL = "http://localhost:8001";
-var ws = new WebSocket("ws://" + BASE_URL + "/echo");
-ws.onopen = function() {
-  ws.send("Hello, world " + new Date().getSeconds())
-};
-ws.onmessage = function (evt) {
-  console.log(evt.data);
-};
 
 export function simpleTerm(parent) {
   // TODO: calculate pixel size given font size
@@ -23,52 +16,6 @@ export function simpleTerm(parent) {
     "ws://" + BASE_URL + "/terminals/websocket/1"
   );
 }
-
-// file tests
-fetch(HOST_URL + "/api/contents/")
-  .then(r => r.json())
-  .then(function(r) {
-
-    if (!r.content || !r.content.length)
-      throw "expected a list of directory content";
-
-    var newFile = 'a.txt';
-    var newFileRename = 'b.txt';
-    
-    fetch(HOST_URL + '/api/contents/' + newFile, {
-      method: 'PUT',
-      body: JSON.stringify({
-        'format': 'text',
-        'type': 'file',
-        'content': 'bla'
-      })
-    }).then(r => r.json())
-      .then(() => {
-
-        fetch(HOST_URL + "/api/contents/" + newFile)
-          .then(r => r.json())
-          .then(r => {
-            if (!r.size)
-              throw "expected greater than 0 file size";
-          });
-
-
-        fetch(HOST_URL + '/api/contents/' + newFile, {
-          method: 'PATCH',
-          body: JSON.stringify({ 'path': newFileRename })
-        }).then(r => r.json())
-          .then((d) => {
-            fetch(HOST_URL + '/api/contents/' + newFileRename, {
-              method: 'DELETE'
-            }).then(r => {
-              if (r.status !== 204)
-                throw "Unexpected response";
-            });
-            
-          });
-        
-      });
-  });
 
 /*
 document.addEventListener('DOMContentLoaded', function() {
@@ -159,43 +106,101 @@ function wsKernel(kernelID) {
   };
 }
 
-fetch(HOST_URL + '/api/kernels')
-  .then(r => r.json())
-  .then((r) => {
+export function testing() {
 
-    if (!r['available'].length)
-      throw "expected at least one item";
+  var ws = new WebSocket("ws://" + BASE_URL + "/echo");
+  ws.onopen = function() {
+    ws.send("Hello, world " + new Date().getSeconds())
+  };
+  ws.onmessage = function (evt) {
+    console.log(evt.data);
+  };  
 
-    r['running'].map((k) => {
-      fetch(HOST_URL + '/api/kernels/' + k.id, {
-        method: 'DELETE'
-      });
+  // file tests
+  fetch(HOST_URL + "/api/contents/")
+    .then(r => r.json())
+    .then(function(r) {
+
+      if (!r.content || !r.content.length)
+        throw "expected a list of directory content";
+
+      var newFile = 'a.txt';
+      var newFileRename = 'b.txt';
+      
+      fetch(HOST_URL + '/api/contents/' + newFile, {
+        method: 'PUT',
+        body: JSON.stringify({
+          'format': 'text',
+          'type': 'file',
+          'content': 'bla'
+        })
+      }).then(r => r.json())
+        .then(() => {
+
+          fetch(HOST_URL + "/api/contents/" + newFile)
+            .then(r => r.json())
+            .then(r => {
+              if (!r.size)
+                throw "expected greater than 0 file size";
+            });
+
+
+          fetch(HOST_URL + '/api/contents/' + newFile, {
+            method: 'PATCH',
+            body: JSON.stringify({ 'path': newFileRename })
+          }).then(r => r.json())
+            .then((d) => {
+              fetch(HOST_URL + '/api/contents/' + newFileRename, {
+                method: 'DELETE'
+              }).then(r => {
+                if (r.status !== 204)
+                  throw "Unexpected response";
+              });
+              
+            });
+          
+        });
     });
 
-    fetch(HOST_URL + '/api/kernels', {
-      method: 'POST',
-      body: JSON.stringify({ 'name': r['available'][r['available'].length - 1] })
-      //body: JSON.stringify({ 'name': r['available'][0] })
-    }).then(r => r.json())
-      .then((r) => {
+  fetch(HOST_URL + '/api/kernels')
+    .then(r => r.json())
+    .then((r) => {
 
-        wsKernel(r.id);
+      if (!r['available'].length)
+        throw "expected at least one item";
 
-        fetch(HOST_URL + '/api/kernels/' + r.id)
-          .then(r => r.json())
-          .then((r) => {
-
-          });
-
-        return;
-        fetch('/api/kernels/' + r.id + '/restart', { method: 'POST' })
-          .then(r => r.json())
-          .then((r) => {
-
-          });
-
-        fetch('/api/kernels/' + r.id + '/interrupt', { method: 'POST' })
-        
+      r['running'].map((k) => {
+        fetch(HOST_URL + '/api/kernels/' + k.id, {
+          method: 'DELETE'
+        });
       });
-  });
 
+      fetch(HOST_URL + '/api/kernels', {
+        method: 'POST',
+        body: JSON.stringify({ 'name': r['available'][r['available'].length - 1] })
+        //body: JSON.stringify({ 'name': r['available'][0] })
+      }).then(r => r.json())
+        .then((r) => {
+
+          wsKernel(r.id);
+
+          fetch(HOST_URL + '/api/kernels/' + r.id)
+            .then(r => r.json())
+            .then((r) => {
+
+            });
+
+          return;
+          fetch('/api/kernels/' + r.id + '/restart', { method: 'POST' })
+            .then(r => r.json())
+            .then((r) => {
+
+            });
+
+          fetch('/api/kernels/' + r.id + '/interrupt', { method: 'POST' })
+          
+        });
+    });
+
+
+}

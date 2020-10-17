@@ -1,6 +1,7 @@
 
-import { uuid, simpleTerm } from "./old_test.js";
+import { uuid, simpleTerm, testing } from "./old_test.js";
 import { test } from "./test.js";
+import { Calculator } from "./calculator.js";
 
 test();
 
@@ -357,7 +358,13 @@ function setupCyto() {
     { group: 'edges',
       data: { id: 'ad', name: 'peter', source: 'a123', target: 'd' } },
     { group: 'edges',
-      data: { id: 'eb', source: 'e', target: 'b' } }
+      data: { id: 'eb', source: 'e', target: 'b' } },
+
+    { group: 'edges',
+      data: { id: 'ac', source: 'a123', target: 'c' } },
+    { group: 'edges',
+      data: { id: 'ca', source: 'c', target: 'a123' } },
+    
   ]);
 
   var holderDiv = function() {
@@ -541,10 +548,6 @@ function setupCyto() {
 
   });
 
-  cy.on('update', 'node', (evt) => {
-    console.log('* update *', evt.target.id())
-  });
-
   // TODO: if parent is moved, child is also moved in location, so popup needs to move
 
   // handles
@@ -555,7 +558,12 @@ function setupCyto() {
       // fired when edgehandles is done and elements are added
       console.log('new edge', sourceNode, targetNode, addedEles)
 
-      sourceNode.trigger('update')
+      // TODO:
+      // may be best to invoke calculator here...
+
+      return;
+      
+      sourceNode.trigger('update', ['x', 100, -1])
       targetNode.trigger('update')
       
     },          
@@ -999,7 +1007,7 @@ document.addEventListener("DOMContentLoaded", function() {
   document.addEventListener('keydown', event => {
     if (event.key === "x") {
       const sel = cy.$(':selected');
-      const len = sel.length
+      const len = sel.length;
       if (len && confirm(`Do you wish to delete ${len} node(s)/edges(s)?`)) {
         sel.remove();
       }
@@ -1013,5 +1021,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // prism vs themes
   // https://github.com/JeremyJeanson/prismjs-vs
+
+  //testing()
+
+  let calc = new Calculator(cy);
+
+  calc.evalNode('#a123');
   
 });
