@@ -329,6 +329,22 @@ function setupCyto() {
 
   cy.add([
     { group: 'nodes',
+      data: { id: 'x1', kind: 'server', name: 'Server', data: { 'host': 'localhost:8001' } },
+      position: { x: 50, y: 200 } },
+    { group: 'nodes',
+      data: { id: 'x2', kind: 'kernel', name: 'Kernel' },
+      position: { x: 200, y: 200 } },
+    { group: 'nodes',
+      data: { id: 'x3', kind: 'terminal', name: 'Terminal' },
+      position: { x: 200, y: 250 } },
+    { group: 'nodes',
+      data: { id: 'x4', kind: 'filesystem', name: 'File System' },
+      position: { x: 200, y: 300 } },
+    { group: 'nodes',
+      data: { id: 'x5', kind: 'notebook', name: 'Notebook' },
+      position: { x: 200, y: 350 } },
+
+    { group: 'nodes',
       data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' },
       position: { x: 400, y: 500 } },
     { group: 'nodes',
@@ -364,6 +380,15 @@ function setupCyto() {
       data: { id: 'ac', source: 'a123', target: 'c' } },
     { group: 'edges',
       data: { id: 'ca', source: 'c', target: 'a123' } },
+
+    { group: 'edges',
+      data: { id: 'x1x2', source: 'x1', target: 'x2' } },
+    { group: 'edges',
+      data: { id: 'x1x3', source: 'x1', target: 'x3' } },
+    { group: 'edges',
+      data: { id: 'x1x4', source: 'x1', target: 'x4' } },
+    { group: 'edges',
+      data: { id: 'x1x5', source: 'x1', target: 'x5' } },
     
   ]);
 
@@ -1027,5 +1052,8 @@ document.addEventListener("DOMContentLoaded", function() {
   let calc = new Calculator(cy);
 
   calc.evalNode('#a123');
+
+  calc.evalNode('#x1');
+
   
 });

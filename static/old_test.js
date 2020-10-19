@@ -1,6 +1,6 @@
 
 var BASE_URL = "localhost:8001";
-var HOST_URL = "http://localhost:8001";
+var HOST_URL = "http://" + BASE_URL;
 
 export function simpleTerm(parent) {
   // TODO: calculate pixel size given font size

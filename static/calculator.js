@@ -9,20 +9,79 @@
 
 const MAX_RECURSION = 10;
 
-const invokeNode = (data, successors) => {
-
+// TODO: probably best to make this a method on a class:
+//
+// Node -> ServerNode
+//      -> OtherNodes
+//
+// these can then be stateful
+//
+// methods/properites:
+// - current state (dictionary)
+// - current value (anything)
+// - properties (dictionary)
+// - invoke(...arguments...)
+//
+// instantiate this node on cytoscape node at creation time or when kind is changed
+//
+const invokeNode = (calculator, node, data, predecessors, evalId, isManual) => {
 
   if (data.kind === "notebook") {
-    // execute each cell
+    // TODO: execute each cell, check if stopped, check if evalId is the same, i.e. do guard check
+    // calculator.guardCheck()
+    throw "collect cells";
+
+    // - TODO: make this work cell by cell for a notebook, which is like a sequence of nodes
+    // .... e.g. emit custom events/invocations per cell,
+    // thus decompose a notebook into a chain of promises with sideffects
+    // -> ? getInvokationFunction() ...
+    // ... remember: this may be interrupted too
+    // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
+    
+    return new Promise((resolve, reject) => {
+      console.log('invoke: ' + data.kind)
+      resolve();
+    });
+    
   } else if (data.kind === "grid") {
   } else if (data.kind === "tree") {
+  } else if (["kernel", "terminal", "filesystem"].includes(data.kind)) {
+
+    const servers = predecessors
+          .map(o => o.data())
+          .filter(o => o["kind"] === "server");
+
+    if (servers.length !== 1) {
+      console.warn("need server to use kernel, terminal, or filesystem")
+      return;
+    }
+
+    const host = (servers[0].data || {}).host;
+    if (!host || !host.length) {
+      console.warn("no host on server")
+      return;
+    }
+
+    // probably need stateful connection based on this now
+    // if different URL then can close and create a new one
+    const scratch = node.scratch('_state') || {};
+    
+    console.log('*', host, scratch)
+
+    if (data.kind === "kernel") {
+
+    } else if (data.kind === "terminal") {
+      
+    } else if (data.kind === "filesystem") {
+      
+    }
     
   }
 
   return new Promise((resolve, reject) => {
     console.log('invoke: ' + data.kind)
     resolve();
-  });  
+  });
   
 }
 
@@ -31,17 +90,35 @@ export class Calculator {
   constructor(cy) {
     this._cy = cy;
     this._currentEvalIncrement = 1;
+    this._stopped = false;
   }
 
   evalNode(id, isManual) {
+    this._stopped = false;
     this._evalNode(id, ++this._currentEvalIncrement, isManual);
+  }
+
+  stop() {
+    this._stopped = true;
+  }
+
+  guardCheck(evalId) {
+    
+    if (this._stopped) {
+      return true;
+    }
+
+    if (evalId !== this._currentEvalIncrement) {
+      // stop, no further computation, only one calculation at a time
+      return true;
+    }
+    
+    return false
   }
 
   _evalNode(id, evalId, isManual) {
 
-    if (evalId !== this._currentEvalIncrement) {
-      // stop, no further computation, only one calculation at a time
-      console.warn(`only one computation allowed at a time, stopping: ${this._currentEvalIncrement}`)
+    if (this.guardCheck(evalId)) {
       return;
     }
     
@@ -71,26 +148,15 @@ export class Calculator {
     }
     
     console.log('eval', id)
-    
-    // - create a variable 'evaluation-id', to track spread of evaluation
-
-    // - use node scratch as an object for eval count if allows recursion
-
-    // - TODO: make this work cell by cell for a notebook, which is like a sequence of nodes
-    // .... e.g. emit custom events/invocations per cell,
-    // thus decompose a notebook into a chain of promises with sideffects
-    // -> ? getInvokationFunction() ...
-    // ... remember: this may be interrupted too
-    // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
 
     // 1) get outward
 
-    const successors = n.successors().filter(o => o.isNode());
+    const predecessors = n.predecessors().filter(o => o.isNode());
 
     // may want to time evaluation, and use a promise here after finishes
     const start = Date.now();
 
-    const ret = invokeNode(data, successors, evalId);
+    const ret = invokeNode(this, n, data, predecessors, evalId, isManual);
 
     if (ret === undefined) {
       return;
@@ -108,12 +174,10 @@ export class Calculator {
         const id = obj.data()["id"];
         this._evalNode("#" + id, evalId, isManual);
       });
-
       
     }).catch((err) => {
       throw err
     });
-
     
   }
   
