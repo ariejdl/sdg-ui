@@ -9,82 +9,6 @@
 
 const MAX_RECURSION = 10;
 
-// TODO: probably best to make this a method on a class:
-//
-// Node -> ServerNode
-//      -> OtherNodes
-//
-// these can then be stateful
-//
-// methods/properites:
-// - current state (dictionary)
-// - current value (anything)
-// - properties (dictionary)
-// - invoke(...arguments...)
-//
-// instantiate this node on cytoscape node at creation time or when kind is changed
-//
-const invokeNode = (calculator, node, data, predecessors, evalId, isManual) => {
-
-  if (data.kind === "notebook") {
-    // TODO: execute each cell, check if stopped, check if evalId is the same, i.e. do guard check
-    // calculator.guardCheck()
-    throw "collect cells";
-
-    // - TODO: make this work cell by cell for a notebook, which is like a sequence of nodes
-    // .... e.g. emit custom events/invocations per cell,
-    // thus decompose a notebook into a chain of promises with sideffects
-    // -> ? getInvokationFunction() ...
-    // ... remember: this may be interrupted too
-    // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
-    
-    return new Promise((resolve, reject) => {
-      console.log('invoke: ' + data.kind)
-      resolve();
-    });
-    
-  } else if (data.kind === "grid") {
-  } else if (data.kind === "tree") {
-  } else if (["kernel", "terminal", "filesystem"].includes(data.kind)) {
-
-    const servers = predecessors
-          .map(o => o.data())
-          .filter(o => o["kind"] === "server");
-
-    if (servers.length !== 1) {
-      console.warn("need server to use kernel, terminal, or filesystem")
-      return;
-    }
-
-    const host = (servers[0].data || {}).host;
-    if (!host || !host.length) {
-      console.warn("no host on server")
-      return;
-    }
-
-    // probably need stateful connection based on this now
-    // if different URL then can close and create a new one
-    const scratch = node.scratch('_state') || {};
-    
-    console.log('*', host, scratch)
-
-    if (data.kind === "kernel") {
-
-    } else if (data.kind === "terminal") {
-      
-    } else if (data.kind === "filesystem") {
-      
-    }
-    
-  }
-
-  return new Promise((resolve, reject) => {
-    console.log('invoke: ' + data.kind)
-    resolve();
-  });
-  
-}
-
 export class Calculator {
 
   constructor(cy) {
@@ -138,11 +62,13 @@ export class Calculator {
     }
 
     // don't check for cycles, but do track evaluation of nodes
-    const scratch = n.scratch("_eval") || {};
-    scratch['call_count'] = (scratch['call_count'] || 0) + 1;
-    n.scratch("_eval", scratch)
+    const scratchEval = n.scratch("eval") || {};
+    const scratchNode = n.scratch("node") || {};
+    
+    scratchEval['call_count'] = (scratchEval['call_count'] || 0) + 1;
+    n.scratch("eval", scratchEval)
 
-    if (scratch['call_count'] > MAX_RECURSION) {
+    if (scratchEval['call_count'] > MAX_RECURSION) {
       console.warn(`maximum recursion reached for ${id}, stopping`)
       return;
     }
@@ -156,7 +82,7 @@ export class Calculator {
     // may want to time evaluation, and use a promise here after finishes
     const start = Date.now();
 
-    const ret = invokeNode(this, n, data, predecessors, evalId, isManual);
+    const ret = scratchNode.node.invoke(n, data, predecessors, evalId, isManual);
 
     if (ret === undefined) {
       return;
