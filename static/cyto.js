@@ -384,7 +384,7 @@ export function addCytoNetwork(cy, calc) {
       data: { id: 'x1', kind: 'server', name: 'Server', data: { 'host': 'localhost:8001' } },
       position: { x: 50, y: 200 } },
     { group: 'nodes',
-      data: { id: 'x2', kind: 'kernel', name: 'Kernel' },
+      data: { id: 'x2', kind: 'kernel', name: 'Kernel', data: { 'kernel_name': 'python3' } },
       position: { x: 200, y: 200 } },
     { group: 'nodes',
       data: { id: 'x3', kind: 'terminal', name: 'Terminal' },
@@ -394,10 +394,10 @@ export function addCytoNetwork(cy, calc) {
       position: { x: 200, y: 300 } },
     { group: 'nodes',
       data: { id: 'x5', kind: 'notebook', name: 'Notebook' },
-      position: { x: 200, y: 350 } },
+      position: { x: 350, y: 200 } },
     { group: 'nodes',
       data: { id: 'x6', kind: 'notebook-cell', name: 'Notebook Cell' },
-      position: { x: 200, y: 400 } },
+      position: { x: 350, y: 250 } },
 
     { group: 'nodes',
       data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' },
@@ -443,18 +443,25 @@ export function addCytoNetwork(cy, calc) {
     { group: 'edges',
       data: { id: 'x1x4', source: 'x1', target: 'x4' } },
     { group: 'edges',
-      data: { id: 'x1x5', source: 'x1', target: 'x5' } },
+      data: { id: 'x2x5', source: 'x2', target: 'x5' } },
     { group: 'edges',
-      data: { id: 'x1x6', source: 'x1', target: 'x6' } },
+      data: { id: 'x2x6', source: 'x2', target: 'x6' } },
     
   ];
 
   data.forEach((n) => {
     if (n.group === "nodes") {
-      n.scratch = { node: { node: getNode(n.data.kind, calc) } }
+      n.scratch = { node: { node: getNode(n.data, calc) } };
     }
   });
 
-  cy.add(data)
+  cy.add(data);
+
+  cy.nodes().forEach((n) => {
+    const node = n.scratch('node');
+    node.node.init(n);
+  });
+
+  // after add, init
   
 }

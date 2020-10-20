@@ -81,8 +81,14 @@ export class Calculator {
 
     // may want to time evaluation, and use a promise here after finishes
     const start = Date.now();
+    let ret;
 
-    const ret = scratchNode.node.invoke(n, data, predecessors, evalId, isManual);
+    try {
+      ret = scratchNode.node.invoke(n, data, predecessors, evalId, isManual);
+    } catch (e) {
+      console.error("error during node invocation: " + e);
+      throw e;
+    }
 
     if (ret === undefined) {
       return;
