@@ -271,8 +271,7 @@ export function setupCyto() {
     el.style['margin-left'] = '10px';
     setupConf(el);
 
-    const predecessors = evt.target.predecessors().filter(o => o.isNode());
-    scratchNode['node'].render(el, data, predecessors, scratchEval['last_return_value']);
+    scratchNode['node'].render(el, data, scratchEval['last_return_value']);
     
     var state = evt.target.scratch('state') || {};
     state.el = el;
@@ -299,7 +298,7 @@ export function setupCyto() {
 
   cy.on('tap', 'edge', (evt) => {
     // nothing for edges
-    console.log(evt.target.id());
+    //console.log(evt.target.id());
   });
 
   const remove = (evt) => {
@@ -319,11 +318,11 @@ export function setupCyto() {
   cy.on('unselect', 'node', remove);
 
   cy.on('keydown', (evt) => {
-    console.log('keydown')
+    //console.log('keydown')
   })
 
   cy.on('add', 'node', (evt) => {
-    console.log('->>', evt.target.json(), evt.target.data())
+    //console.log('->>', evt.target.json(), evt.target.data())
   });
 
   cy.on('move', 'node', (evt) => {

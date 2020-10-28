@@ -27,6 +27,8 @@ export function getNode(data, calculator) {
     return new KernelNode(data, calculator)
   } else if (data.kind === "grid") {
     
+  } else if (data.kind === "text") {
+    return new TextNode(data, calculator);	
   } else if (data.kind === "notebook-cell") {
     return new NotebookCellNode(data, calculator);
   } else if (["kernel", "terminal", "filesystem",
@@ -99,7 +101,7 @@ export class Node {
     
   }
 
-  render(el, data, predecessors, last_value) {
+  render(el, data, last_value) {
     // i.e. slickgrid etc.
 
     if (data['kind'] === "grid") {
@@ -170,9 +172,7 @@ export class Node {
       cont.style['margin-top'] = '10px';
       el.appendChild(cont);
 
-      const values = this.getPreviousValues(predecessors) || {};
-
-      cont.innerHTML = JSON.stringify(values);
+      cont.innerHTML = last_value
     }
     
   }
@@ -293,6 +293,17 @@ export class KernelNode extends ServerDependentNode {
 export class NotebookNode extends ServerNode {
 
   
+}
+
+export class TextNode extends ServerNode {
+
+  invoke(node, data, predecessors, evalId, isManual) {
+    const values = this.getPreviousValues(predecessors) || {};
+    
+    return new Promise((resolve) => {
+      resolve(JSON.stringify(values));
+    })
+  }
 }
 
 export class NotebookCellNode extends ServerNode {

@@ -9,6 +9,7 @@ export function simpleTerm(parent) {
   var term = document.createElement("div");
   term.className = "xterm";
   //term.style.position = "absolute";
+  term.style.display = "none";
   term.style.width = "811px";
   term.style.height = "171px";
   parent.appendChild(term);
@@ -17,6 +18,7 @@ export function simpleTerm(parent) {
     { cols: 90, rows: 10 },
     "ws://" + BASE_URL + "/terminals/websocket/1"
   );
+  term.style.display = "block";
 }
 
 /*
