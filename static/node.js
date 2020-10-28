@@ -29,6 +29,8 @@ export function getNode(data, calculator) {
     
   } else if (data.kind === "text") {
     return new TextNode(data, calculator);	
+  } else if (data.kind === "terminal") {
+    return new TerminalNode(data, calculator);	
   } else if (data.kind === "notebook-cell") {
     return new NotebookCellNode(data, calculator);
   } else if (["kernel", "terminal", "filesystem",
@@ -44,9 +46,6 @@ export class Node {
   constructor(data, calculator) {
     this._data = data;
     this._calculator = calculator;
-    
-    this._currentState = {};
-    this._currentValue = undefined;
     this._properties = {};
   }
 
@@ -153,12 +152,6 @@ export class Node {
       el.appendChild(can);
       twgltest(can);
     } else if (data['kind'] === "terminal") {
-      var cont = document.createElement("div");
-      cont.classList.add("basic-box");
-      cont.style['margin-top'] = '10px';
-      el.appendChild(cont);
-      
-      simpleTerm(cont);
     } else if (data['kind'] === "notebook") {
       var cont = document.createElement("div");
       cont.classList.add("basic-box");
@@ -258,7 +251,6 @@ export class KernelNode extends ServerDependentNode {
     this._haveKernel = false;
 
 
-
     if (server.data.host && data.kernel_name) {
 
       return new Promise((resolve, reject) => {
@@ -269,9 +261,8 @@ export class KernelNode extends ServerDependentNode {
             kernel.connect()
               .then(() => {
                 this._haveKernel = true;
-                this._currentState['kernel'] = kernel;
+                this._currentKernel = kernel;
                 resolve();
-                console.log('created!')
               })
               .catch(() => {
                 reject();
@@ -320,17 +311,88 @@ export class NotebookCellNode extends ServerNode {
     }
 
     const kernelNode = kernels[0].scratch('node');
-    const kernelHelper = kernelNode.node._currentState['kernel'];
+    const kernelHelper = kernelNode.node._currentKernel;
 
     if (kernelHelper) {
       return kernelHelper.execCodeSimple(code)
         .then((res) => {
-          console.log('calc:', res)
           return res;
         });
     }
   }
   
+}
+
+
+export class TerminalNode extends ServerDependentNode {
+
+  init(n) {
+
+    const predecessors = n.predecessors().filter(o => o.isNode());
+    const server = this.getServer(predecessors);
+
+    if (!server) {
+      return;
+    }
+    
+    const url = server.data.host;
+    const ws_url = "ws://" + url + "/terminals/websocket/1";
+
+    return new Promise((resolve) => {
+
+      const size = { cols: 90, rows: 10 };
+      var ws = new WebSocket(ws_url);
+      var term = new Terminal({
+        cols: size.cols,
+        rows: size.rows,
+        screenKeys: true,
+        useStyle: true
+      });
+      
+      ws.onopen = function(event) {
+        ws.send(JSON.stringify(["set_size", size.rows, size.cols,
+                                window.innerHeight, window.innerWidth]));
+
+        term.onData(function(data) {
+          // TODO: could create an event hook here, e.g. look for e.g. token '%%'
+          ws.send(JSON.stringify(['stdin', data]));
+        });
+
+        ws.onmessage = function(event) {
+          let json_msg = JSON.parse(event.data);
+          switch(json_msg[0]) {
+          case "stdout":
+            term.write(json_msg[1]);
+            break;
+          case "disconnect":
+            term.write("\r\n\r\n[Finished... Terminado]\r\n");
+            break;
+          }
+        };
+        resolve();
+      };
+
+      this._term = term;
+
+    });
+
+  }
+  
+  render(el, data, last_value) {
+    var cont = document.createElement("div");
+    cont.classList.add("basic-box");
+    cont.style['margin-top'] = '10px';
+    el.appendChild(cont);
+    //cont.appendChild(this._termEl);
+
+    this._term.open(cont);
+    this._term.focus();
+    //this._term.fit();
+
+    //this._term.write('echo "arie"\r\n')
+    
+    //simpleTerm(cont);
+  }
 }
 
 function twgltest(el) {
