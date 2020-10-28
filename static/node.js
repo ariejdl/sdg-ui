@@ -1,6 +1,5 @@
 
 import { KernelHelper } from "./kernel.js";
-import { simpleTerm, testing } from "./old_test.js";
 import { slickgrid, slickgridTree } from "./slickgrid.js";
 
 // TODO: probably best to make this a method on a class:
@@ -383,15 +382,12 @@ export class TerminalNode extends ServerDependentNode {
     cont.classList.add("basic-box");
     cont.style['margin-top'] = '10px';
     el.appendChild(cont);
-    //cont.appendChild(this._termEl);
 
     this._term.open(cont);
     this._term.focus();
     //this._term.fit();
 
     //this._term.write('echo "arie"\r\n')
-    
-    //simpleTerm(cont);
   }
 }
 

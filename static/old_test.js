@@ -4,28 +4,6 @@ var HOST_URL = "http://" + BASE_URL;
 
 import { uuid } from "./utils.js";
 
-export function simpleTerm(parent) {
-  // TODO: calculate pixel size given font size
-  var term = document.createElement("div");
-  term.className = "xterm";
-  //term.style.position = "absolute";
-  term.style.width = "811px";
-  term.style.height = "171px";
-  make_terminal(
-    term,
-    { cols: 90, rows: 10 },
-    "ws://" + BASE_URL + "/terminals/websocket/1"
-  );
-  parent.appendChild(term);
-  
-}
-
-/*
-document.addEventListener('DOMContentLoaded', function() {
-  simpleTerm()
-});
-*/
-
 /* treat this as a kind of unit test for back-end to begin with */
 
 function wsKernel(url, kernelID) {
@@ -47,8 +25,6 @@ function wsKernel(url, kernelID) {
       "channel":"shell"}));
 
     console.log('---', uuid1)
-
-    return;
 
 
     ws.send(JSON.stringify({

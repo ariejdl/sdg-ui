@@ -1,6 +1,6 @@
 
 import { uuid } from "./utils.js";
-import { simpleTerm, testing } from "./old_test.js";
+import { testing } from "./old_test.js";
 import { Calculator } from "./calculator.js";
 import { addCytoNetwork, setupCyto } from "./cyto.js";
 
@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
   
-  testing()
+  //testing()
 
   calc.evalNode('#a123');
 
