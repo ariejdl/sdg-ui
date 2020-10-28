@@ -1,5 +1,6 @@
 
-import { uuid, simpleTerm, testing } from "./old_test.js";
+import { KernelHelper } from "./kernel.js";
+import { simpleTerm, testing } from "./old_test.js";
 import { slickgrid, slickgridTree } from "./slickgrid.js";
 
 // TODO: probably best to make this a method on a class:
@@ -26,6 +27,8 @@ export function getNode(data, calculator) {
     return new KernelNode(data, calculator)
   } else if (data.kind === "grid") {
     
+  } else if (data.kind === "notebook-cell") {
+    return new NotebookCellNode(data, calculator);
   } else if (["kernel", "terminal", "filesystem",
               "notebook", "notebook-cell"].includes(data.kind)) {
     return new ServerDependentNode(data, calculator)
@@ -50,6 +53,15 @@ export class Node {
   }
 
   init(n) {
+  }
+
+  getPreviousValues(predecessors) {
+    const lookup = {};
+    predecessors.forEach((n) => {
+      const scratchEval = n.scratch("eval");
+      lookup[n.data()['id']] = scratchEval['last_return_value'];
+    });
+    return lookup;
   }
 
   invoke(node, data, predecessors, evalId, isManual) {
@@ -87,7 +99,7 @@ export class Node {
     
   }
 
-  render(el, data) {
+  render(el, data, predecessors, last_value) {
     // i.e. slickgrid etc.
 
     if (data['kind'] === "grid") {
@@ -152,6 +164,15 @@ export class Node {
       el.appendChild(cont);
 
       cont.innerHTML = "testing1<br/>testing2<br/>testing3";
+    } else if (data['kind'] === "text") {
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.style['margin-top'] = '10px';
+      el.appendChild(cont);
+
+      const values = this.getPreviousValues(predecessors) || {};
+
+      cont.innerHTML = JSON.stringify(values);
     }
     
   }
@@ -179,6 +200,7 @@ export class ServerDependentNode extends Node {
 
   invoke(node, data, predecessors, evalId, isManual) {
 
+    const values = this.getPreviousValues(predecessors);
     const server = this.getServer(predecessors);
 
     if (!server) {
@@ -217,7 +239,7 @@ export class KernelNode extends ServerDependentNode {
   }
 
   init(n) {
-    this.updateConnection(n);
+    return this.updateConnection(n);
   }
 
   updateConnection(n) {
@@ -227,23 +249,41 @@ export class KernelNode extends ServerDependentNode {
     if (!server) {
       throw "no server found";
     }
+
+    if (this._haveKernel) {
+      throw "already have running kernel";
+    }
     
     var data = this._data.data || {};
     this._haveKernel = false;
 
+
+
     if (server.data.host && data.kernel_name) {
-      fetch('http://' + server.data.host + '/api/kernels', {
-        method: 'POST',
-        body: JSON.stringify({ 'name': data.kernel_name })
-        //body: JSON.stringify({ 'name': r['available'][0] })
-      }).then(r => r.json())
-        .then((r) => {
-          console.log('kernel id:', r.id)
-        })
-        .catch(() => {
-        })
-      
-    } else {
+
+      return new Promise((resolve, reject) => {
+        
+        const kernel = new KernelHelper(server.data.host, data.kernel_name)
+        kernel.create()
+          .then((id) => {
+            kernel.connect()
+              .then(() => {
+                this._haveKernel = true;
+                this._currentState['kernel'] = kernel;
+                resolve();
+                console.log('created!')
+              })
+              .catch(() => {
+                reject();
+                throw "error connecting to new kernel";
+              });
+          })
+          .catch(() => {
+            reject();
+            throw "error creating kernel";
+          })
+
+      });
       
     }
   }
@@ -252,6 +292,33 @@ export class KernelNode extends ServerDependentNode {
 
 export class NotebookNode extends ServerNode {
 
+  
+}
+
+export class NotebookCellNode extends ServerNode {
+
+
+  invoke(node, data, predecessors, evalId, isManual) {
+
+    const code = data['data']['code'];
+    const kernels = predecessors
+          .filter(o => o.data()["kind"] === "kernel");
+
+    if (kernels.length !== 1) {
+      throw "expected one kernel";
+    }
+
+    const kernelNode = kernels[0].scratch('node');
+    const kernelHelper = kernelNode.node._currentState['kernel'];
+
+    if (kernelHelper) {
+      return kernelHelper.execCodeSimple(code)
+        .then((res) => {
+          console.log('calc:', res)
+          return res;
+        });
+    }
+  }
   
 }
 

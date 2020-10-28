@@ -2,6 +2,8 @@
 var BASE_URL = "localhost:8001";
 var HOST_URL = "http://" + BASE_URL;
 
+import { uuid } from "./utils.js";
+
 export function simpleTerm(parent) {
   // TODO: calculate pixel size given font size
   var term = document.createElement("div");
@@ -25,25 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* treat this as a kind of unit test for back-end to begin with */
 
-export function uuid() {
-  /**
-   * http://www.ietf.org/rfc/rfc4122.txt
-   */
-  var s = [];
-  var hexDigits = "0123456789abcdef";
-  for (var i = 0; i < 32; i++) {
-    s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
-  }
-  s[12] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
-   // bits 6-7 of the clock_seq_hi_and_reserved to 01
-  s[16] = hexDigits.substr((s[16] & 0x3) | 0x8, 1); 
-
-  var uuid = s.join("");
-  return uuid;
-};
-
-function wsKernel(kernelID) {
-  var ws = new WebSocket("ws://" + BASE_URL + "/api/kernels/" + kernelID + "/channels");
+function wsKernel(url, kernelID) {
+  var ws = new WebSocket("ws://" + url + "/api/kernels/" + kernelID + "/channels");
   ws.onopen = function() {
 
     // note parent_header.msg_id seems to enable doing request/reply
@@ -51,13 +36,19 @@ function wsKernel(kernelID) {
     // https://jupyter-client.readthedocs.io/en/stable/messaging.html
     // "username" and "session" keys seem to be optional but must be null for julia
 
+    const uuid1 = uuid();
     ws.send(JSON.stringify({
-      "header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"kernel_info_request","version":"5.2"},
+      "header":{"msg_id": uuid1,"username":null,"session":null,"msg_type":"kernel_info_request","version":"5.2"},
       "metadata":{},
       "content":{},
       "buffers":[],
       "parent_header":{},
-      "channel":"shell"}))
+      "channel":"shell"}));
+
+    console.log('---', uuid1)
+
+    return;
+
 
     ws.send(JSON.stringify({
       "header":{"msg_id":uuid(),"username":null,"session":null,"msg_type":"comm_info_request","version":"5.2"},
@@ -182,7 +173,7 @@ export function testing() {
       }).then(r => r.json())
         .then((r) => {
 
-          wsKernel(r.id);
+          wsKernel(BASE_URL, r.id);
 
           fetch(HOST_URL + '/api/kernels/' + r.id)
             .then(r => r.json())

@@ -82,24 +82,33 @@ export class Calculator {
     // may want to time evaluation, and use a promise here after finishes
     const start = Date.now();
     let ret;
+    let success = false;
 
     try {
       ret = scratchNode.node.invoke(n, data, predecessors, evalId, isManual);
+      success = true;
     } catch (e) {
       console.error("error during node invocation: " + e);
       throw e;
     }
 
-    if (ret === undefined) {
+    if (!success) {
       return;
     }
 
-    ret.then((res) => {
+    (ret || Promise.resolve()).then((res) => {
+
+      console.log('ret:', res);
 
       const end = Date.now();
       const duration = end - start;
 
-      const n = this._cy.$(id)
+      const n = this._cy.$(id);
+
+      const scratchEval = n.scratch("eval") || {};
+      scratchEval['last_return_value'] = res;
+      n.scratch("eval", scratchEval);
+      
       const outgoers = n.outgoers().filter(o => o.isNode());
 
       outgoers.forEach((obj) => {

@@ -1,26 +1,28 @@
 
 import { getNode, Node, ServerNode, NotebookNode } from "./node.js";
 
+const greenColor = '#11dd22';
+
 const _handleStyle = [            // some style for the extension
 
   {
     selector: '.eh-handle',
     style: {
-      'background-color': 'white',
+      'background-color': greenColor,
       'width': 6,
       'height': 6,
       'shape': 'ellipse',
       'overlay-opacity': 0,
       'border-width': 2, // makes the handle easier to hit
       'border-opacity': 1,
-      'border-color': 'green'
+      'border-color': greenColor
     }
   },
 
   {
     selector: '.eh-hover',
     style: {
-      'background-color': 'green'
+      'background-color': greenColor
     }
   },
 
@@ -28,7 +30,7 @@ const _handleStyle = [            // some style for the extension
     selector: '.eh-source',
     style: {
       'border-width': 2,
-      'border-color': 'green'
+      'border-color': greenColor
     }
   },
 
@@ -36,17 +38,17 @@ const _handleStyle = [            // some style for the extension
     selector: '.eh-target',
     style: {
       'border-width': 2,
-      'border-color': 'green'
+      'border-color': greenColor
     }
   },*/
 
   {
     selector: '.eh-preview, .eh-ghost-edge',
     style: {
-      'background-color': 'green',
-      'line-color': 'green',
-      'target-arrow-color': 'green',
-      'source-arrow-color': 'green'
+      'background-color': greenColor,
+      'line-color': greenColor,
+      'target-arrow-color': greenColor,
+      'source-arrow-color': greenColor
     }
   },
 
@@ -253,6 +255,7 @@ export function setupCyto() {
     var el = holderDiv();
     const data = evt.target.data();
     const scratchNode = evt.target.scratch('node');
+    const scratchEval = evt.target.scratch('eval') || {};
     let keysCount = 0;
     for (const k in data) {
       keysCount++;
@@ -268,7 +271,8 @@ export function setupCyto() {
     el.style['margin-left'] = '10px';
     setupConf(el);
 
-    scratchNode['node'].render(el, data);
+    const predecessors = evt.target.predecessors().filter(o => o.isNode());
+    scratchNode['node'].render(el, data, predecessors, scratchEval['last_return_value']);
     
     var state = evt.target.scratch('state') || {};
     state.el = el;
@@ -377,7 +381,7 @@ export function setupCyto() {
   return cy;
 }
 
-export function addCytoNetwork(cy, calc) {
+export function addCytoNetwork(cy, calc, initCallback) {
 
   const data = [
     { group: 'nodes',
@@ -396,8 +400,12 @@ export function addCytoNetwork(cy, calc) {
       data: { id: 'x5', kind: 'notebook', name: 'Notebook' },
       position: { x: 350, y: 200 } },
     { group: 'nodes',
-      data: { id: 'x6', kind: 'notebook-cell', name: 'Notebook Cell' },
+      data: { id: 'x6', kind: 'notebook-cell', name: 'Notebook Cell',
+              data: { code: '24 ** 3' } },
       position: { x: 350, y: 250 } },
+    { group: 'nodes',
+      data: { id: 'x7', kind: 'text', name: 'Text Rep.' }, // TODO: show value
+      position: { x: 500, y: 250 } },
 
     { group: 'nodes',
       data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' },
@@ -446,6 +454,8 @@ export function addCytoNetwork(cy, calc) {
       data: { id: 'x2x5', source: 'x2', target: 'x5' } },
     { group: 'edges',
       data: { id: 'x2x6', source: 'x2', target: 'x6' } },
+    { group: 'edges',
+      data: { id: 'x6x7', source: 'x6', target: 'x7' } },
     
   ];
 
@@ -457,10 +467,18 @@ export function addCytoNetwork(cy, calc) {
 
   cy.add(data);
 
+  let promises = [];
+
   cy.nodes().forEach((n) => {
     const node = n.scratch('node');
-    node.node.init(n);
+    const ret = node.node.init(n);
+    if (ret !== undefined) {
+      promises.push(ret);
+    }
   });
+
+  Promise.all(promises)
+    .then(initCallback)
 
   // after add, init
   

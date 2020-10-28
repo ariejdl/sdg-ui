@@ -1,5 +1,6 @@
 
-import { uuid, simpleTerm, testing } from "./old_test.js";
+import { uuid } from "./utils.js";
+import { simpleTerm, testing } from "./old_test.js";
 import { Calculator } from "./calculator.js";
 import { addCytoNetwork, setupCyto } from "./cyto.js";
 
@@ -121,7 +122,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
   let calc = new Calculator(cy);
 
-  addCytoNetwork(cy, calc);
+  addCytoNetwork(cy, calc, () => {
+    // test eval
+    calc.evalNode('#x1');
+  });
 
   document.addEventListener('keydown', event => {
     if (event.key === "x") {
@@ -133,11 +137,9 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
   
-  //testing()
+  testing()
 
   calc.evalNode('#a123');
-
-  calc.evalNode('#x1');
 
   
 });
