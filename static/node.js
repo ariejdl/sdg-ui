@@ -1,6 +1,6 @@
 
 import { KernelHelper } from "./kernel.js";
-import { slickgrid, slickgridTree } from "./slickgrid.js";
+import { treeFilter, slickgrid, slickgridTree, SlickgridTree } from "./slickgrid.js";
 
 // TODO: probably best to make this a method on a class:
 //
@@ -25,13 +25,17 @@ export function getNode(data, calculator) {
   } else if (data.kind === "kernel") {
     return new KernelNode(data, calculator)
   } else if (data.kind === "grid") {
-    
+
+  } else if (data.kind === "server-grid") {
+    return new ServerGridNode(data, calculator);
   } else if (data.kind === "text") {
     return new TextNode(data, calculator);	
   } else if (data.kind === "terminal") {
     return new TerminalNode(data, calculator);	
   } else if (data.kind === "notebook-cell") {
     return new NotebookCellNode(data, calculator);
+  } else if (data.kind === "filesystem") {
+    return new FileSystemNode(data, calculator);
   } else if (["kernel", "terminal", "filesystem",
               "notebook", "notebook-cell"].includes(data.kind)) {
     return new ServerDependentNode(data, calculator)
@@ -234,23 +238,42 @@ export class KernelNode extends ServerDependentNode {
     return this.updateConnection(n);
   }
 
+  invoke(node, data, predecessors, evalId, isManual) {
+    // TODO: check this code is right
+    
+    // if host has changed, update the kernel, the kernel is state
+    const updated = this.updateConnection(node);
+    if (updated !== undefined) {
+      return updated.then(() => {
+        return super.invoke(node, data, predecessors, evalId, isManual);
+      })
+    }
+
+    return super.invoke(node, data, predecessors, evalId, isManual);
+  }
+
   updateConnection(n) {
     const predecessors = n.predecessors().filter(o => o.isNode());
     const server = this.getServer(predecessors);
 
     if (!server) {
-      throw "no server found";
+      return;
     }
 
-    if (this._haveKernel) {
-      throw "already have running kernel";
+    if (server.data.host === this._currentHost) {
+      return;
     }
-    
+
+    if (this._currentHost !== undefined) {
+      // TODO: clean up old connection and close it if changes
+    }
+
     var data = this._data.data || {};
-    this._haveKernel = false;
-
 
     if (server.data.host && data.kernel_name) {
+
+      this._currentHost = undefined;
+      this._currentKernel = undefined;
 
       return new Promise((resolve, reject) => {
         
@@ -259,7 +282,7 @@ export class KernelNode extends ServerDependentNode {
           .then((id) => {
             kernel.connect()
               .then(() => {
-                this._haveKernel = true;
+                this._currentHost = server.data.host;
                 this._currentKernel = kernel;
                 resolve();
               })
@@ -389,6 +412,133 @@ export class TerminalNode extends ServerDependentNode {
 
     //this._term.write('echo "arie"\r\n')
   }
+}
+
+export class ServerGridNode extends ServerDependentNode {
+
+  render(el, data, last_value) {
+    var cont = document.createElement("div");
+    cont.classList.add("basic-box");
+    cont.style['margin-top'] = '10px';
+    el.appendChild(cont);
+    
+    cont.style['width'] = '400px';
+    cont.style['height'] = '400px';
+    slickgrid(cont);
+  }
+  
+}
+
+function depthFirstFlattenTree(treeItems) {
+  let flat = [];
+  for (var i = 0; i < treeItems.length; i++) {
+    var obj = treeItems[i];
+    flat.push(obj);
+    if (obj.has_children) {
+      flat = flat.concat(depthFirstFlattenTree(obj.children));
+    }
+  }
+  return flat;
+}
+
+export class FileSystemNode extends ServerDependentNode {
+
+  init(n) {
+
+    this._tree = new SlickgridTree();
+    
+    return this.updateConnection(n);
+  }
+
+  updateConnection(n) {
+    const predecessors = n.predecessors().filter(o => o.isNode());
+    const server = this.getServer(predecessors);
+
+    if (!server) {
+      return;
+    }
+    
+    this._url = "http://" + server.data.host;
+  }
+
+  invoke(node, data, predecessors, evalId, isManual) {
+    this.updateConnection(node);
+    super.invoke(node, data, predecessors, evalId, isManual);
+  }
+
+  render(el, data, last_value) {
+
+    var cont = document.createElement("div");
+    cont.classList.add("basic-box");
+    cont.style['margin-top'] = '10px';
+    el.appendChild(cont);
+    
+    cont.style['width'] = '400px';
+    cont.style['height'] = '400px';
+
+    this._tree.setup(cont, (path, tree, obj) => {
+
+      fetch(this._url + "/api/contents/" + path) // +path
+        .then(r => r.json())
+        .then((r) => {
+          
+          console.log(r.content)
+
+          const fsObjs = r.content.map((row) => {
+
+            const path = obj ? (obj.path + "/" + row.name) : row.name;
+            
+            return {
+              id: "id_" + path,
+              indent: obj ? obj.indent + 1 : 0,
+              title: row.name,
+              path: path,
+              parent: null,
+              _collapsed: true,
+              has_children: row.type === "directory",
+              parent_obj: obj,
+              children: []
+            };
+          });
+
+          let newData = tree;
+
+          if (obj) {
+            obj.children = fsObjs;
+          } else {
+            newData = fsObjs;
+          }
+          
+          // this needs to be flattened tree
+          //debugger
+          this._tree.data = depthFirstFlattenTree(newData);
+
+          this._tree.dataView.beginUpdate();
+          this._tree.dataView.setItems(this._tree.data);
+          this._tree.dataView.setFilter(treeFilter);
+          this._tree.dataView.endUpdate();
+          
+          //this._tree.grid.invalidateRows(this._tree.data.map((v, i) => i));
+          //this._tree.grid.render();
+          
+          // .type === "directory"
+        })
+      
+      depthFirstFlattenTree
+    }, (tree) => {
+      this._tree.data = depthFirstFlattenTree(tree);
+
+      this._tree.dataView.beginUpdate();
+      this._tree.dataView.setItems(this._tree.data);
+      this._tree.dataView.setFilter(treeFilter);
+      this._tree.dataView.endUpdate();
+      
+    });
+
+
+
+  }
+
 }
 
 function twgltest(el) {

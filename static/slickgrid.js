@@ -1,19 +1,132 @@
 
-export function slickgridTree(el) {
+export function treeFilter(item) {
 
-  function requiredFieldValidator(value) {
-    if (value == null || value == undefined || !value.length) {
-      return {valid: false, msg: "This is a required field"};
-    } else {
-      return {valid: true, msg: null};
+  if (item.parent_obj !== null) {
+    var parent = item.parent_obj;
+
+    while (parent) {
+
+      // + other filters
+      if (parent._collapsed) {
+        return false;
+      }
+
+      parent = parent.parent_obj;
     }
   }
 
+  return true;
+}
 
-  var TaskNameFormatter = function (row, cell, value, columnDef, dataContext) {
+function requiredFieldValidator(value) {
+  if (value == null || value == undefined || !value.length) {
+    return {valid: false, msg: "This is a required field"};
+  } else {
+    return {valid: true, msg: null};
+  }
+}
+
+export class SlickgridTree {
+
+  setup(el, callback, collapseCallback) {
+
+    this.data = [];
+
+    const TitleFormatter = (row, cell, value, columnDef, dataContext) => {
+      value = value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      
+      var spacer = "<span style='display:inline-block;height:1px;width:" +
+          (15 * dataContext["indent"]) + "px'></span>";
+
+      if (dataContext.has_children) {
+        if (dataContext._collapsed) {
+          return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
+        } else {
+          return spacer + " <span class='toggle collapse'></span>&nbsp;" + value;
+        }
+      } else {
+        return spacer + " <span class='toggle'></span>&nbsp;" + value;
+      }
+
+    }
+
+    var columns = [
+      {id: "title", name: "Title", field: "title", width: 220, cssClass: "cell-title",
+       formatter: TitleFormatter, editor: Slick.Editors.Text, validator: requiredFieldValidator},
+      {id: "duration", name: "Duration", field: "duration", editor: Slick.Editors.Text},
+    ];
+
+    var options = {
+      editable: false,
+      enableAddRow: false,
+      enableCellNavigation: true,
+      asyncEditorLoading: false
+    };
+
+    var percentCompleteThreshold = 0;
+    var searchString = "";
+
+    // initialize the model
+    this.dataView = new Slick.Data.DataView({ inlineFilters: true });
+
+    this.dataView.beginUpdate();
+    this.dataView.setItems(this.data);
+    this.dataView.setFilter(treeFilter);
+    this.dataView.endUpdate();
+
+    // initialize the grid
+    this.grid = new Slick.Grid(el, this.dataView, columns, options);
+
+    this.grid.onClick.subscribe((e, args) => {
+      if ($(e.target).hasClass("toggle")) {
+        // TODO: click toggle, callback
+        var item = this.dataView.getItem(args.row);
+        if (item) {
+          if (!item._collapsed) {
+            console.log('close')
+            item.children = [];
+            item._collapsed = true;
+            collapseCallback(this.data)
+          } else {
+            console.log('open')
+            item._collapsed = false;
+            callback(item.path, this.data, item);
+          }
+          this.dataView.updateItem(item.id, item);
+        }
+        e.stopImmediatePropagation();
+      }
+    });
+
+    // wire up model events to drive the grid
+    this.dataView.onRowCountChanged.subscribe((e, args) => {
+      this.grid.updateRowCount();
+      this.grid.render();
+    });
+
+    this.dataView.onRowsChanged.subscribe((e, args) => {
+      this.grid.invalidateRows(args.rows);
+      this.grid.render();
+    });
+
+    callback("");
+
+  }
+  
+}
+
+export function slickgridTree(el) {
+
+  function TitleFormatter(row, cell, value, columnDef, dataContext) {
     value = value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
+    
+    var spacer = "<span style='display:inline-block;height:1px;width:" +
+        (15 * dataContext["indent"]) + "px'></span>";
+    
     var idx = dataView.getIdxById(dataContext.id);
+
+    console.log('%', data[idx])
+    
     if (data[idx + 1] && data[idx + 1].indent > data[idx].indent) {
       if (dataContext._collapsed) {
         return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
@@ -23,19 +136,16 @@ export function slickgridTree(el) {
     } else {
       return spacer + " <span class='toggle'></span>&nbsp;" + value;
     }
-  };
+  }
 
   var dataView;
   var grid;
   var data = [];
   
   var columns = [
-    {id: "title", name: "Title", field: "title", width: 220, cssClass: "cell-title", formatter: TaskNameFormatter, editor: Slick.Editors.Text, validator: requiredFieldValidator},
+    {id: "title", name: "Title", field: "title", width: 220, cssClass: "cell-title",
+     formatter: TitleFormatter, editor: Slick.Editors.Text, validator: requiredFieldValidator},
     {id: "duration", name: "Duration", field: "duration", editor: Slick.Editors.Text},
-    //{id: "%", name: "% Complete", field: "percentComplete", width: 80, resizable: false, formatter: Slick.Formatters.PercentCompleteBar, editor: Slick.Editors.PercentComplete},
-    //{id: "start", name: "Start", field: "start", minWidth: 60, editor: Slick.Editors.Date},
-    //{id: "finish", name: "Finish", field: "finish", minWidth: 60, editor: Slick.Editors.Date},
-    //{id: "effort-driven", name: "Effort Driven", width: 80, minWidth: 20, maxWidth: 80, cssClass: "cell-effort-driven", field: "effortDriven", formatter: Slick.Formatters.Checkmark, editor: Slick.Editors.Checkbox, cannotTriggerInsert: true}
   ];
 
   var options = {
@@ -45,43 +155,14 @@ export function slickgridTree(el) {
     asyncEditorLoading: false
   };
 
-  function myFilter(item) {
-
-    /*
-    if (item["percentComplete"] < percentCompleteThreshold) {
-      return false;
-    }
-
-    if (searchString != "" && item["title"].indexOf(searchString) == -1) {
-      return false;
-    }
-    */
-
-    if (item.parent_obj !== null) {
-      var parent = item.parent_obj;
-
-      while (parent) {
-
-        // + other filters
-        if (parent._collapsed) {
-          return false;
-        }
-
-        parent = parent.parent_obj;
-      }
-    }
-
-    return true;
-  }  
-
   var percentCompleteThreshold = 0;
   var searchString = "";
 
   var indent = 0;
   var parents = [];
 
-  // prepare the data
-  for (var i = 0; i < 1000; i++) {
+  // create the data
+  for (var i = 0; i < 100; i++) {
     var d = (data[i] = {});
     var parent;
 
@@ -103,61 +184,45 @@ export function slickgridTree(el) {
     d["indent"] = indent;
     d["parent"] = parent;
     d["title"] = "Task " + i;
-    d["effortDriven"] = (i % 5 == 0);
   }
 
+  // set parent information
   for (var i = 0; i < data.length; i++) {
     var obj = data[i];
     if (obj.parent !== null) {
       obj.parent_obj = data[obj.parent];
     }
+    delete obj['parent'];
   }
-
 
   // initialize the model
   dataView = new Slick.Data.DataView({ inlineFilters: true });
+
   dataView.beginUpdate();
   dataView.setItems(data);
-  dataView.setFilter(myFilter);
+  dataView.setFilter(treeFilter);
   dataView.endUpdate();
 
   // initialize the grid
   grid = new Slick.Grid(el, dataView, columns, options);
 
-  grid.onCellChange.subscribe(function (e, args) {
-    dataView.updateItem(args.item.id, args.item);
-  });
-
-  grid.onAddNewRow.subscribe(function (e, args) {
-    var item = {
-      "id": "new_" + (Math.round(Math.random() * 10000)),
-      "indent": 0,
-      "title": "New task",
-      "duration": "1 day",
-      "percentComplete": 0,
-      "start": "01/01/2009",
-      "finish": "01/01/2009",
-      "effortDriven": false};
-    $.extend(item, args.item);
-    dataView.addItem(item);
-  });
-
   grid.onClick.subscribe(function (e, args) {
     if ($(e.target).hasClass("toggle")) {
+      // TODO: click toggle, callback
       var item = dataView.getItem(args.row);
       if (item) {
         if (!item._collapsed) {
+          console.log('close')
           item._collapsed = true;
         } else {
+          console.log('open')
           item._collapsed = false;
         }
-
         dataView.updateItem(item.id, item);
       }
       e.stopImmediatePropagation();
     }
   });
-
 
   // wire up model events to drive the grid
   dataView.onRowCountChanged.subscribe(function (e, args) {
@@ -170,7 +235,7 @@ export function slickgridTree(el) {
     grid.render();
   });
 
-  
+  return { dataView: dataView, grid: grid };
   
 }
 
@@ -276,43 +341,44 @@ grid.onKeyDown.subscribe(function(e) {
     });
   //  })
 
+  // TODO: fix when transform:scale() affects cell selection
   grid.setSelectionModel(new Slick.CellSelectionModel());
-    grid.registerPlugin(new Slick.AutoTooltips());
+  grid.registerPlugin(new Slick.AutoTooltips());
 
-    // set keyboard focus on the grid
-    grid.getCanvasNode().focus();
+  // set keyboard focus on the grid
+  grid.getCanvasNode().focus();
 
-    var copyManager = new Slick.CellCopyManager();
-    grid.registerPlugin(copyManager);
+  var copyManager = new Slick.CellCopyManager();
+  grid.registerPlugin(copyManager);
 
-    copyManager.onPasteCells.subscribe(function (e, args) {
-      if (args.from.length !== 1 || args.to.length !== 1) {
-        throw "This implementation only supports single range copy and paste operations";
-      }
+  copyManager.onPasteCells.subscribe(function (e, args) {
+    if (args.from.length !== 1 || args.to.length !== 1) {
+      throw "This implementation only supports single range copy and paste operations";
+    }
 
-      var from = args.from[0];
-      var to = args.to[0];
-      var val;
-      for (var i = 0; i <= from.toRow - from.fromRow; i++) {
-        for (var j = 0; j <= from.toCell - from.fromCell; j++) {
-          if (i <= to.toRow - to.fromRow && j <= to.toCell - to.fromCell) {
-            val = data[from.fromRow + i][columns[from.fromCell + j].field];
-            data[to.fromRow + i][columns[to.fromCell + j].field] = val;
-            grid.invalidateRow(to.fromRow + i);
-          }
+    var from = args.from[0];
+    var to = args.to[0];
+    var val;
+    for (var i = 0; i <= from.toRow - from.fromRow; i++) {
+      for (var j = 0; j <= from.toCell - from.fromCell; j++) {
+        if (i <= to.toRow - to.fromRow && j <= to.toCell - to.fromCell) {
+          val = data[from.fromRow + i][columns[from.fromCell + j].field];
+          data[to.fromRow + i][columns[to.fromCell + j].field] = val;
+          grid.invalidateRow(to.fromRow + i);
         }
       }
-      grid.render();
-    });
+    }
+    grid.render();
+  });
 
-    grid.onAddNewRow.subscribe(function (e, args) {
-      var item = args.item;
-      var column = args.column;
-      grid.invalidateRow(data.length);
-      data.push(item);
-      grid.updateRowCount();
-      grid.render();
-    });
+  grid.onAddNewRow.subscribe(function (e, args) {
+    var item = args.item;
+    var column = args.column;
+    grid.invalidateRow(data.length);
+    data.push(item);
+    grid.updateRowCount();
+    grid.render();
+  });
   
 }
 
