@@ -86,11 +86,12 @@ export class SlickgridTree {
             console.log('close')
             item.children = [];
             item._collapsed = true;
-            collapseCallback(this.data)
+            collapseCallback()
           } else {
             console.log('open')
             item._collapsed = false;
-            callback(item.path, this.data, item);
+            item.children = [];
+            callback(item.path, item);
           }
           this.dataView.updateItem(item.id, item);
         }
@@ -100,11 +101,13 @@ export class SlickgridTree {
 
     // wire up model events to drive the grid
     this.dataView.onRowCountChanged.subscribe((e, args) => {
+      console.log('row count changed')
       this.grid.updateRowCount();
       this.grid.render();
     });
 
     this.dataView.onRowsChanged.subscribe((e, args) => {
+      console.log('rows changed')
       this.grid.invalidateRows(args.rows);
       this.grid.render();
     });

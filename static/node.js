@@ -476,23 +476,23 @@ export class FileSystemNode extends ServerDependentNode {
     cont.style['width'] = '400px';
     cont.style['height'] = '400px';
 
-    this._tree.setup(cont, (path, tree, obj) => {
+    var base;
+
+    this._tree.setup(cont, (path, obj) => {
 
       fetch(this._url + "/api/contents/" + path) // +path
         .then(r => r.json())
         .then((r) => {
-          
-          console.log(r.content)
 
+          // TODO: ensure reconstruct from tree
+          
           const fsObjs = r.content.map((row) => {
 
-            const path = obj ? (obj.path + "/" + row.name) : row.name;
-            
             return {
-              id: "id_" + path,
+              id: "id_" + row.path,
               indent: obj ? obj.indent + 1 : 0,
               title: row.name,
-              path: path,
+              path: row.path,
               parent: null,
               _collapsed: true,
               has_children: row.type === "directory",
@@ -501,7 +501,11 @@ export class FileSystemNode extends ServerDependentNode {
             };
           });
 
-          let newData = tree;
+          if (!path) {
+            base = fsObjs;
+          }          
+
+          let newData = base;
 
           if (obj) {
             obj.children = fsObjs;
@@ -511,27 +515,42 @@ export class FileSystemNode extends ServerDependentNode {
           
           // this needs to be flattened tree
           //debugger
-          this._tree.data = depthFirstFlattenTree(newData);
+          var data = depthFirstFlattenTree(newData);
+
+          console.log(data)
 
           this._tree.dataView.beginUpdate();
-          this._tree.dataView.setItems(this._tree.data);
+          this._tree.dataView.setItems(data);
+          this._tree.data = data
           this._tree.dataView.setFilter(treeFilter);
           this._tree.dataView.endUpdate();
-          
+          this._tree.dataView.refresh();
+
+          this._tree.grid.invalidate();
           //this._tree.grid.invalidateRows(this._tree.data.map((v, i) => i));
-          //this._tree.grid.render();
+          this._tree.grid.render();
           
           // .type === "directory"
         })
       
       depthFirstFlattenTree
-    }, (tree) => {
-      this._tree.data = depthFirstFlattenTree(tree);
+    }, () => {
+
+      if (!base) {
+        throw "no data";
+      }
+      
+      var data = depthFirstFlattenTree(base);
 
       this._tree.dataView.beginUpdate();
-      this._tree.dataView.setItems(this._tree.data);
+      this._tree.dataView.setItems(data);
+      this._tree.data = data
       this._tree.dataView.setFilter(treeFilter);
       this._tree.dataView.endUpdate();
+      this._tree.dataView.refresh();
+
+      this._tree.grid.invalidate();
+      this._tree.grid.render();
       
     });
 
