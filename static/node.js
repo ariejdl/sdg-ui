@@ -476,6 +476,7 @@ export class FileSystemNode extends ServerDependentNode {
     cont.style['width'] = '400px';
     cont.style['height'] = '400px';
 
+    // TODO: clean up this code
     var base;
 
     this._tree.setup(cont, (path, obj) => {

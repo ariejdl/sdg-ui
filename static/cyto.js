@@ -405,6 +405,13 @@ export function addCytoNetwork(cy, calc, initCallback) {
     { group: 'nodes',
       data: { id: 'x7', kind: 'text', name: 'Text Rep.' }, // TODO: show value
       position: { x: 500, y: 250 } },
+    { group: 'nodes',
+      data: { id: 'x8', kind: 'python-dataframe', name: 'Py Dataframe',
+              data: { code: '24 ** 3' } },
+      position: { x: 350, y: 300 } },
+    { group: 'nodes',
+      data: { id: 'x9', kind: 'grid', name: 'Grid' }, // TODO: show value
+      position: { x: 500, y: 300 } },
 
     { group: 'nodes',
       data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' },
@@ -455,6 +462,10 @@ export function addCytoNetwork(cy, calc, initCallback) {
       data: { id: 'x2x6', source: 'x2', target: 'x6' } },
     { group: 'edges',
       data: { id: 'x6x7', source: 'x6', target: 'x7' } },
+    { group: 'edges',
+      data: { id: 'x2x8', source: 'x2', target: 'x8' } },
+    { group: 'edges',
+      data: { id: 'x8x9', source: 'x8', target: 'x9' } },
     
   ];
 
