@@ -1,6 +1,6 @@
 
 import { KernelHelper } from "./kernel.js";
-import { treeFilter, slickgrid, slickgridTree, SlickgridTree } from "./slickgrid.js";
+import { slickgridAsync, treeFilter, slickgrid, slickgridTree, SlickgridTree } from "./slickgrid.js";
 
 // TODO: probably best to make this a method on a class:
 //
@@ -26,8 +26,8 @@ export function getNode(data, calculator) {
     return new KernelNode(data, calculator)
   } else if (data.kind === "grid") {
 
-  } else if (data.kind === "server-grid") {
-    return new ServerGridNode(data, calculator);
+  } else if (data.kind === "python-dataframe") {
+    return new PythonDFNode(data, calculator);
   } else if (data.kind === "text") {
     return new TextNode(data, calculator);	
   } else if (data.kind === "terminal") {
@@ -179,6 +179,7 @@ export class ServerNode extends Node {
 
 }
 
+
 export class ServerDependentNode extends Node {
 
   getServer(predecessors) {
@@ -303,12 +304,11 @@ export class KernelNode extends ServerDependentNode {
 
 }
 
-export class NotebookNode extends ServerNode {
-
+export class NotebookNode extends Node {
   
 }
 
-export class TextNode extends ServerNode {
+export class TextNode extends Node {
 
   invoke(node, data, predecessors, evalId, isManual) {
     const values = this.getPreviousValues(predecessors) || {};
@@ -319,14 +319,17 @@ export class TextNode extends ServerNode {
   }
 }
 
-export class NotebookCellNode extends ServerNode {
-
+export class NotebookCellNode extends Node {
 
   invoke(node, data, predecessors, evalId, isManual) {
 
     const code = data['data']['code'];
     const kernels = predecessors
           .filter(o => o.data()["kind"] === "kernel");
+
+    if (!code) {
+      return;
+    }
 
     if (kernels.length !== 1) {
       throw "expected one kernel";
@@ -410,11 +413,21 @@ export class TerminalNode extends ServerDependentNode {
     this._term.focus();
     //this._term.fit();
 
+    // TODO: figure out sending text... xterm js?
     //this._term.write('echo "arie"\r\n')
   }
 }
 
-export class ServerGridNode extends ServerDependentNode {
+// make this a notebook cell?
+export class PythonDFNode extends ServerDependentNode {
+
+  constructor(data, calculator) {
+    super(data, calculator);
+    this._initInProgress = false;
+    this._init = false;
+    this._rowCount = undefined;
+    this._columns = undefined;
+  }
 
   render(el, data, last_value) {
     var cont = document.createElement("div");
@@ -424,8 +437,93 @@ export class ServerGridNode extends ServerDependentNode {
     
     cont.style['width'] = '400px';
     cont.style['height'] = '400px';
-    slickgrid(cont);
+
+    // need:
+    // - row count
+    // - column names
+    // - row data
+
+    // need callback to fetch and populate DF data
+
+    if (this._rowCount && this._columns) {
+      slickgridAsync(cont, this._rowCount, this._columns, (from, to) => {
+        return this._currentKernelHelper.execCodeSimple(
+          `json.dumps(${this._sym}[${from}:${to}].to_dict('records'))`);
+      });
+    }
+    
+    
   }
+
+  refresh() {
+    return Promise.all([
+      this._currentKernelHelper.execCodeSimple(`len(${this._sym})`),
+      this._currentKernelHelper.execCodeSimple(`list(${this._sym}.columns)`)
+    ]).then((res) => {
+      const len = +res[0];
+      const cols = JSON.parse(res[1].replace(/\'/ig, '"'))
+      if (cols) {
+        this._rowCount = len;
+        this._columns = cols;
+      }
+    });
+  }
+
+  invoke(node, data, predecessors, evalId, isManual) {
+
+    if (this._initInProgress) {
+      return;
+    }
+
+    this._currentKernelHelper = undefined;
+
+    // in kernel, use node id for variable of grid
+
+    const az = data['id'].match(/[a-z0-9]+/ig);
+
+    if (!az) {
+      throw 'invalid id';
+    }
+    
+    this._sym = '_sym_' + az[0];
+
+    const code = data['data']['init_code'];
+    const kernels = predecessors
+          .filter(o => o.data()["kind"] === "kernel");
+
+    if (!code) {
+      throw "expected initialisation code";
+    }
+
+    if (!code.match(/\$sym/)) {
+      throw "initialisation code should have a $sym variable to capture dataframe"
+    }
+
+    if (kernels.length !== 1) {
+      throw "expected one kernel";
+    }
+
+    const kernelNode = kernels[0].scratch('node');
+    const kernelHelper = kernelNode.node._currentKernel;
+    this._currentKernelHelper = kernelHelper;
+
+    if (this._init) {
+      return this.refresh();
+    }
+    
+    this._initInProgress = true;
+
+    if (kernelHelper) {
+      return kernelHelper.execCodeSimple(code.replace(/\$sym/ig, this._sym), "execute_reply")
+        .then((res) => {
+          this._init = true;
+          this._initInProgress = false;
+          return this.refresh(kernelHelper);
+        })
+        .catch(() => {
+        })
+    }
+  }  
   
 }
 
@@ -517,8 +615,6 @@ export class FileSystemNode extends ServerDependentNode {
           // this needs to be flattened tree
           //debugger
           var data = depthFirstFlattenTree(newData);
-
-          console.log(data)
 
           this._tree.dataView.beginUpdate();
           this._tree.dataView.setItems(data);

@@ -74,11 +74,11 @@ export class KernelHelper {
   shutdown() {
   }
 
-  execCodeSimple(code) {
+  execCodeSimple(code, return_msg) {
     return new Promise((resolve, reject) => {
       return this.requestReply(
         "execute_request",
-        "execute_result",
+        return_msg || "execute_result",
         {
           "code": code,
           "silent":false,
@@ -99,7 +99,7 @@ export class KernelHelper {
           }
         }
         if (!found) {
-          reject();
+          resolve();
         }
       });
 

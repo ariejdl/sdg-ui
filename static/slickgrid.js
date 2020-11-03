@@ -1,4 +1,6 @@
 
+import { throttle } from "./utils.js";
+
 export function treeFilter(item) {
 
   if (item.parent_obj !== null) {
@@ -128,8 +130,6 @@ export function slickgridTree(el) {
     
     var idx = dataView.getIdxById(dataContext.id);
 
-    console.log('%', data[idx])
-    
     if (data[idx + 1] && data[idx + 1].indent > data[idx].indent) {
       if (dataContext._collapsed) {
         return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
@@ -242,6 +242,177 @@ export function slickgridTree(el) {
   
 }
 
+function RemoteModel(size, query) {
+  // private
+  var data = { length: size };
+  var searchstr = "";
+  var sortcol = null;
+  var sortdir = 1;
+  var h_request = null;
+  var req = null; // ajax request
+
+  // events
+  var onDataLoading = new Slick.Event();
+  var onDataLoaded = new Slick.Event();
+
+  function init() {
+  }
+
+  function isDataLoaded(from, to) {
+    for (var i = from; i <= to; i++) {
+      if (data[i] == undefined || data[i] == null) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function clear() {
+    for (var key in data) {
+      delete data[key];
+    }
+    data.length = 0;
+  }
+
+
+  function _ensureData(from, to) {
+    // throttle this
+    query(from, to)
+      .then((res) => {
+        onSuccess(from, to, JSON.parse(res.substring(1, res.length - 1)));
+      })
+      .catch(onError)
+  }
+
+  const ensureData = throttle(_ensureData, 100);
+
+
+  function onError(fromPage, toPage) {
+    throw "error loading pages " + (fromPage + " to " + toPage);
+  }
+
+  function onSuccess(from, to, results) {
+    for (var i = 0; i < results.length; i++) {
+      data[from + i] = results[i];
+      data[from + i].__index = from + i;
+    }
+
+    req = null;
+
+    onDataLoaded.notify({from: from, to: to});
+  }
+
+  function reloadData(from, to) {
+    for (var i = from; i <= to; i++) {
+      delete data[i];
+    }
+
+    ensureData(from, to);
+  }
+
+
+  function setSort(column, dir) {
+    sortcol = column;
+    sortdir = dir;
+    clear();
+  }
+
+  function setSearch(str) {
+    searchstr = str;
+    clear();
+  }
+
+
+  init();
+
+  return {
+    // properties
+    "data": data,
+
+    // methods
+    "clear": clear,
+    "isDataLoaded": isDataLoaded,
+    "ensureData": ensureData,
+    "reloadData": reloadData,
+    "setSort": setSort,
+    "setSearch": setSearch,
+
+    // events
+    "onDataLoading": onDataLoading,
+    "onDataLoaded": onDataLoaded
+  };
+}
+
+export function slickgridAsync(el, rows, cols, query) {
+
+  var grid;
+  var loader = new RemoteModel(rows, query);
+
+  function basicFormatter (row, cell, value, columnDef, dataContext) {
+    return value
+  }  
+
+  var columns = [
+    {id: "sel", name: "", field: "__index", behavior: "select", cssClass: "cell-selection", width: 40, resizable: false, selectable: false }
+  ].concat(cols.map((n) => ({id: n, name: n, width: 120, field: n, formatter: basicFormatter })));
+
+  //{id: "title", name: "Title", field: "title", width: 220, cssClass: "cell-title",
+  //formatter: TitleFormatter, editor: Slick.Editors.Text, validator: requiredFieldValidator},
+
+
+  var options = {
+    editable: false,
+    enableAddRow: false,
+    enableCellNavigation: false
+  };
+
+  var loadingIndicator = null;
+
+  grid = new Slick.Grid(el, loader.data, columns, options);
+
+  grid.onViewportChanged.subscribe(function (e, args) {
+    var vp = grid.getViewport();
+    loader.ensureData(vp.top, vp.bottom);
+  });
+
+  grid.onSort.subscribe(function (e, args) {
+    var vp = grid.getViewport();
+    loader.ensureData(vp.top, vp.bottom);
+  });
+
+  loader.onDataLoading.subscribe(function () {
+    if (!loadingIndicator) {
+      loadingIndicator = $("<span class='loading-indicator'><label>Loading...</label></span>").appendTo(document.body);
+      var $g = $(el);
+
+      loadingIndicator
+        .css("position", "absolute")
+        .css("top", $g.position().top + $g.height() / 2 - loadingIndicator.height() / 2)
+        .css("left", $g.position().left + $g.width() / 2 - loadingIndicator.width() / 2);
+    }
+
+    loadingIndicator.show();
+  });
+
+  loader.onDataLoaded.subscribe(function (e, args) {
+    for (var i = args.from; i <= args.to; i++) {
+      grid.invalidateRow(i);
+    }
+
+    grid.updateRowCount();
+    grid.render();
+
+    loadingIndicator.fadeOut();
+
+  })
+
+    // load the first page
+  grid.onViewportChanged.notify();  
+
+  
+}
+
 export function slickgrid(el) {
   // https://mleibman.github.io/SlickGrid/examples/
   // https://mleibman.github.io/SlickGrid/examples/example-spreadsheet.html
@@ -268,7 +439,7 @@ grid.onKeyDown.subscribe(function(e) {
   var ed = Slick.Editors.Text; // FormulaEditor
   
   var columns = [
-    {id: "sel", name: "", field: "num", behavior: "select", cssClass: "cell-selection", width: 40, resizable: false, selectable: false },    
+    {id: "sel", name: "", field: "__index", behavior: "select", cssClass: "cell-selection", width: 40, resizable: false, selectable: false },    
     {id: "t1", name: "Title", field: "_t1", width: 120, editor: ed }, //
     {id: "t2", name: "Title2", field: "_t2", width: 120, editor: ed },
     {id: "t3", name: "Title3", field: "_t3", width: 120, editor: ed },
@@ -330,7 +501,7 @@ grid.onKeyDown.subscribe(function(e) {
     for (var i = 0; i < 500; i++) {
       var d = (data[i] = {});
 
-      d["num"] = i + 1;
+      d["__index"] = i + 1;
       d["_t1"] = "Task " + i;
       d["_t2"] = Math.random();
       d["_t3"] = Math.random();
@@ -374,6 +545,7 @@ grid.onKeyDown.subscribe(function(e) {
     grid.render();
   });
 
+  /*
   grid.onAddNewRow.subscribe(function (e, args) {
     var item = args.item;
     var column = args.column;
@@ -382,6 +554,7 @@ grid.onKeyDown.subscribe(function(e) {
     grid.updateRowCount();
     grid.render();
   });
+  */
   
 }
 

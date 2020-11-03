@@ -407,11 +407,14 @@ export function addCytoNetwork(cy, calc, initCallback) {
       position: { x: 500, y: 250 } },
     { group: 'nodes',
       data: { id: 'x8', kind: 'python-dataframe', name: 'Py Dataframe',
-              data: { code: '24 ** 3' } },
+              data: { init_code: `
+import pandas as pd
+import numpy as np
+import json
+$sym = pd.DataFrame(np.random.randn(300, 4), columns=['A1', 'B', 'C3', 'D'])
+$sym['B'][2:10] = 'overwrite test'
+` } },
       position: { x: 350, y: 300 } },
-    { group: 'nodes',
-      data: { id: 'x9', kind: 'grid', name: 'Grid' }, // TODO: show value
-      position: { x: 500, y: 300 } },
 
     { group: 'nodes',
       data: { id: 'a123', kind: 'grid', parent: 'b', name: 'grid' },
@@ -463,9 +466,7 @@ export function addCytoNetwork(cy, calc, initCallback) {
     { group: 'edges',
       data: { id: 'x6x7', source: 'x6', target: 'x7' } },
     { group: 'edges',
-      data: { id: 'x2x8', source: 'x2', target: 'x8' } },
-    { group: 'edges',
-      data: { id: 'x8x9', source: 'x8', target: 'x9' } },
+      data: { id: 'x2x8', source: 'x2', target: 'x8' } }
     
   ];
 
