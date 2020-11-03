@@ -450,6 +450,8 @@ export class PythonDFNode extends ServerDependentNode {
         return this._currentKernelHelper.execCodeSimple(
           `json.dumps(${this._sym}[${from}:${to}].to_dict('records'))`);
       });
+    } else {
+      cont.innerHTML = "Initialising...";
     }
     
     

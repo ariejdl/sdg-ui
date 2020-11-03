@@ -411,7 +411,7 @@ export function addCytoNetwork(cy, calc, initCallback) {
 import pandas as pd
 import numpy as np
 import json
-$sym = pd.DataFrame(np.random.randn(300, 4), columns=['A1', 'B', 'C3', 'D'])
+$sym = pd.DataFrame(np.random.randn(3000, 4), columns=['A1', 'B', 'C3', 'D'])
 $sym['B'][2:10] = 'overwrite test'
 ` } },
       position: { x: 350, y: 300 } },
