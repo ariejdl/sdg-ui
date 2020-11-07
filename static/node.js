@@ -1,4 +1,5 @@
 
+import { throttle, capitalize, dom } from "./utils.js";
 import { KernelHelper } from "./kernel.js";
 import { slickgridAsync, treeFilter, slickgrid, slickgridTree, SlickgridTree } from "./slickgrid.js";
 
@@ -18,6 +19,22 @@ import { slickgridAsync, treeFilter, slickgrid, slickgridTree, SlickgridTree } f
 // instantiate this node on cytoscape node at creation time or when kind is changed
 //
 
+const nodeKinds = [
+  "server",
+  "kernel",
+  "code",
+  "text",
+  "python-dataframe",
+  "terminal",
+  "notebook-cell",
+  "file-system",
+  "kernel",
+  "terminal",
+  "file-system",
+  "notebook",
+  "notebook-cell"
+]
+
 export function getNode(data, calculator) {
 
   if (data.kind === "server") {
@@ -36,9 +53,9 @@ export function getNode(data, calculator) {
     return new TerminalNode(data, calculator);	
   } else if (data.kind === "notebook-cell") {
     return new NotebookCellNode(data, calculator);
-  } else if (data.kind === "filesystem") {
+  } else if (data.kind === "file-system") {
     return new FileSystemNode(data, calculator);
-  } else if (["kernel", "terminal", "filesystem",
+  } else if (["kernel", "terminal", "file-system",
               "notebook", "notebook-cell"].includes(data.kind)) {
     return new ServerDependentNode(data, calculator)
   }
@@ -48,17 +65,115 @@ export function getNode(data, calculator) {
 
 export class Node {
 
+  canScale = true;
+
   constructor(data, calculator) {
     this._data = data;
     this._calculator = calculator;
     this._properties = {};
   }
 
-  updateData(data) {
-    this._data = data;
+  init(n) {
   }
 
-  init(n) {
+  renderConf(node, data, el) {
+
+    // TODO: update cyto node data
+    
+    var conf = document.createElement("div");
+    conf.classList.add("basic-box");
+    conf.classList.add("node-conf");
+    
+    ['name',
+     'kind',
+     'buttons'].forEach((name) => {
+       var row = document.createElement("div");
+       row.classList.add("row");
+       conf.appendChild(row);       
+
+       if (name === "name") {
+         row.innerHTML = `
+<div style="display:flex;justify-content:space-between;">
+  <div>
+    name
+  </div>
+  <input style="width:188px;" value="${data['name'] || ''}" />
+</div>
+`;
+         const input = row.querySelector("input");
+         
+         dom.on(input, 'keyup', throttle(() => {
+           const value = input.value || "";
+           const data = node.data();
+           data['name'] = value;
+           node.data(data);
+         }, 100));
+         
+       } else if (name === "kind") {
+
+         const nodeOptions = nodeKinds.map(
+           v => `<option value="${v}" ${v === data['kind'] ? 'selected' : ''}>${v.split('-').map(capitalize).join(' ')}</option>`)
+         
+         row.innerHTML = `
+<div style="display:flex;justify-content:space-between;">
+  <div>
+    kind
+  </div>
+  <select style="width:200px;">
+    <option>-</option>
+    ${nodeOptions}
+  </select>
+</div>
+`;
+
+         const sel = row.querySelector("select");
+
+         dom.on(sel, 'change', () => {
+           const value = sel.value || "";
+           const data = node.data();
+           data['kind'] = value;
+           node.data(data);
+           const newNode = getNode(node.data(), this._calculator);
+           node.scratch(
+             'node', { node: newNode });
+
+           el.innerHTML = "";
+           var cont = document.createElement("div");
+           cont.classList.add("basic-box");
+           cont.innerHTML = "Initialising...";
+           el.appendChild(cont);
+           
+           (newNode.init(node) || Promise.resolve())
+             .then(() => {
+               el.innerHTML = "";
+               node.trigger("tap");
+             })
+           
+         });
+         
+       } else if (name === 'buttons') {
+
+         row.innerHTML = `
+<div>
+  <img src="/static/images/bootstrap-icons/arrows-fullscreen.svg" />
+  <img src="/static/images/bootstrap-icons/arrows-angle-contract.svg" />
+  <img src="/static/images/bootstrap-icons/eye-fill.svg" />
+  <img src="/static/images/bootstrap-icons/eye-slash.svg" />
+  <img src="/static/images/bootstrap-icons/play-fill.svg" />
+  <img src="/static/images/bootstrap-icons/stop-fill.svg" />
+</div>
+`;
+         
+         //restore/maximise/pin/run'
+       } else {
+         row.innerHTML = name;
+}
+
+       
+       
+
+    });
+    el.appendChild(conf);    
   }
 
   getPreviousValues(predecessors) {
@@ -93,7 +208,7 @@ export class Node {
       
     } else if (data.kind === "grid") {
     } else if (data.kind === "tree") {
-    } else if (["kernel", "terminal", "filesystem"].includes(data.kind)) {
+    } else if (["kernel", "terminal", "file-system"].includes(data.kind)) {
 
       
     }
@@ -107,6 +222,7 @@ export class Node {
 
   render(el, data, last_value) {
     // i.e. slickgrid etc.
+    // TODO: regard width/height e.g. restore/maximise
 
     if (data['kind'] === "grid") {
       var cont = document.createElement("div");
@@ -181,7 +297,7 @@ export class ServerDependentNode extends Node {
           .filter(o => o["kind"] === "server");
 
     if (servers.length !== 1) {
-      console.warn("need server to use kernel, terminal, or filesystem")
+      console.warn("need server to use kernel, terminal, or file-system")
       return;
     }
 
@@ -211,7 +327,7 @@ export class ServerDependentNode extends Node {
 
     } else if (data.kind === "terminal") {
       
-    } else if (data.kind === "filesystem") {
+    } else if (data.kind === "file-system") {
       
     } else if (data.kind === "notebook") {
       
@@ -344,6 +460,8 @@ export class NotebookCellNode extends Node {
 
 export class TerminalNode extends ServerDependentNode {
 
+  canScale = false;
+
   init(n) {
 
     const predecessors = n.predecessors().filter(o => o.isNode());
@@ -413,6 +531,8 @@ export class TerminalNode extends ServerDependentNode {
 
 // make this a notebook cell?
 export class PythonDFNode extends ServerDependentNode {
+
+  canScale = false;
 
   constructor(data, calculator) {
     super(data, calculator);

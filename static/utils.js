@@ -37,3 +37,14 @@ export function uuid() {
   var uuid = s.join("");
   return uuid;
 };
+
+export function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+export const dom = {
+  gid: function(s) { return document.getElementById(s); },
+  ce: function(n) { return document.createElement(n); },
+  ap: function(a,b) { a.appendChild(b); },
+  on: function(e, n, fn) { e.addEventListener(n, fn); }
+};

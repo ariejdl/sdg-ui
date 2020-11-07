@@ -445,4 +445,30 @@ h1 {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+.node-conf {
+  width: 300px;
+  margin-top: -100px;
+  background: white;
+  padding: 5px;
+}
+
+.node-conf > .row {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.node-conf > .row:first-child {
+  margin-top: 0px;
+}
+
+.node-conf > .row:last-child {
+  margin-bottom: 0px;
+}
+
+.node-conf input,
+.node-conf select {
+  width: 120px;
+  padding: 4px;
+}
+
 /*# sourceMappingURL=main.css.map */

@@ -233,22 +233,6 @@ export function setupCyto() {
 
   cy.on('pan zoom resize', updateAll);
 
-  function setupConf(el) {
-    var conf = document.createElement("div");
-    conf.classList.add("basic-box");
-    conf['style']['width'] = '200px';
-    conf['style']['margin-top'] = '-100px';
-    conf['style']['background'] = 'white';
-    conf['style']['padding'] = '5px';
-    // name, kind, expand collapse, show
-    ['name', 'kind', 'expand/collapse', 'show/fullscreen/pin'].forEach((name) => {
-      var row = document.createElement("div");
-      row.innerHTML = name;
-      conf.appendChild(row);
-    });
-    el.appendChild(conf);
-  }
-
   cy.on('tap', 'node', (evt) => {
     // TODO: refresh all visible, remove if not visible
     
@@ -270,7 +254,8 @@ export function setupCyto() {
     }
 
     el.style['margin-left'] = '10px';
-    setupConf(el);
+
+    scratchNode['node'].renderConf(evt.target, data, el);
 
     scratchNode['node'].render(el, data, scratchEval['last_return_value']);
     
@@ -281,11 +266,13 @@ export function setupCyto() {
       content: () => el
     });
     function update() {
+      const canScale = scratchNode['node'].canScale;
+      
       let rect = ref.getBoundingClientRect();
       el.style['position'] = 'absolute';
       el.style['top'] = rect.top + 'px';
       el.style['left'] = (rect.left + rect.width) + 'px';
-      el.style['transform'] = `scale(${Math.min(1, cy.zoom())})`;
+      el.style['transform'] = `scale(${canScale ? Math.min(1, cy.zoom()) : 1})`;
       el.style['transform-origin'] = 'left top';
     }
     update();
@@ -394,7 +381,7 @@ export function addCytoNetwork(cy, calc, initCallback) {
       data: { id: 'x3', kind: 'terminal', name: 'Terminal' },
       position: { x: 200, y: 250 } },
     { group: 'nodes',
-      data: { id: 'x4', kind: 'filesystem', name: 'File System' },
+      data: { id: 'x4', kind: 'file-system', name: 'File System' },
       position: { x: 200, y: 300 } },
     { group: 'nodes',
       data: { id: 'x9', kind: 'code', name: 'Init Code',
@@ -442,9 +429,6 @@ $sym['B'][2:10] = 'overwrite test'
     { group: 'nodes',
       data: { id: 'f', parent: 'e', kind: 'test-draw', name: 'Draw' },
       position: { x: 150, y: 100 } },
-    { group: 'nodes',
-      data: { id: 'g', parent: 'e', kind: 'terminal', name: 'Terminal' },
-      position: { x: 300, y: 100 } },
     { group: 'nodes',
       data: { id: 'h', parent: 'e', kind: 'notebook', name: 'Notebook' },
       position: { x: 450, y: 100 } },
