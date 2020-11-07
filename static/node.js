@@ -95,9 +95,9 @@ export class Node {
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
   <div>
-    name
+    Name
   </div>
-  <input style="width:188px;" value="${data['name'] || ''}" />
+  <input style="width:190px;" value="${data['name'] || ''}" />
 </div>
 `;
          const input = row.querySelector("input");
@@ -117,7 +117,7 @@ export class Node {
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
   <div>
-    kind
+    Kind
   </div>
   <select style="width:200px;">
     <option>-</option>
@@ -154,15 +154,32 @@ export class Node {
        } else if (name === 'buttons') {
 
          row.innerHTML = `
-<div>
-  <img src="/static/images/bootstrap-icons/arrows-fullscreen.svg" />
-  <img src="/static/images/bootstrap-icons/arrows-angle-contract.svg" />
-  <img src="/static/images/bootstrap-icons/eye-fill.svg" />
-  <img src="/static/images/bootstrap-icons/eye-slash.svg" />
-  <img src="/static/images/bootstrap-icons/play-fill.svg" />
-  <img src="/static/images/bootstrap-icons/stop-fill.svg" />
+<div style="display:flex;justify-content:flex-end;">
+  <span class="node-button" title="full screen">
+    <img src="/static/images/bootstrap-icons/arrows-fullscreen.svg" />
+  </span>
+<!--  <span class="node-button" title="restore size">
+    <img src="/static/images/bootstrap-icons/arrows-angle-contract.svg" />
+  </span> -->
+<!--  <span class="node-button" title="show content">
+    <img src="/static/images/bootstrap-icons/eye-fill.svg" />
+  </span> -->
+  <span class="node-button" title="hide content">
+    <img src="/static/images/bootstrap-icons/eye-slash.svg" />
+  </span>
+  <span class="run-node node-button" title="run node">
+    <img src="/static/images/bootstrap-icons/play-fill.svg" />
+  </span>
+<!--  <span class="node-button" title="stop">
+    <img src="/static/images/bootstrap-icons/stop-fill.svg" />
+  </span> -->
 </div>
 `;
+
+         dom.on(row.querySelector(".run-node"), 'click', () => {
+           const data = node.data();
+           this._calculator.evalNode('#' + data['id']);
+         });
          
          //restore/maximise/pin/run'
        } else {

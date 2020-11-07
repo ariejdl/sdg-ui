@@ -390,6 +390,55 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   background: red;
 }
 
+.node-conf {
+  width: 300px;
+  margin-top: -100px;
+  background: white;
+  padding: 5px;
+}
+
+.node-conf > .row {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.node-conf > .row:first-child {
+  margin-top: 0px;
+}
+
+.node-conf > .row:last-child {
+  margin-bottom: 0px;
+}
+
+.node-conf input,
+.node-conf select {
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  width: 200px;
+  padding: 4px;
+}
+
+.node-button {
+  display: inline-block;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 10px;
+  border-radius: 2px;
+}
+
+.node-button > img {
+  width: 22px;
+  height: 22px;
+}
+
+.node-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.node-button:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 html, body {
   width: 100%;
   height: 100%;
@@ -443,32 +492,6 @@ h1 {
 .basic-box {
   border: 1px solid #333;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.node-conf {
-  width: 300px;
-  margin-top: -100px;
-  background: white;
-  padding: 5px;
-}
-
-.node-conf > .row {
-  margin-top: 5px;
-  margin-bottom: 5px;
-}
-
-.node-conf > .row:first-child {
-  margin-top: 0px;
-}
-
-.node-conf > .row:last-child {
-  margin-bottom: 0px;
-}
-
-.node-conf input,
-.node-conf select {
-  width: 120px;
-  padding: 4px;
 }
 
 /*# sourceMappingURL=main.css.map */
