@@ -26,6 +26,8 @@ export function getNode(data, calculator) {
     return new KernelNode(data, calculator)
   } else if (data.kind === "grid") {
 
+  } else if (data.kind === "code") {
+    return new CodeEditorNode(data, calculator);
   } else if (data.kind === "python-dataframe") {
     return new PythonDFNode(data, calculator);
   } else if (data.kind === "text") {
@@ -124,15 +126,6 @@ export class Node {
       cont.style['width'] = '400px';
       cont.style['height'] = '400px';
       slickgridTree(cont);
-    } else if (data['kind'] === "code") {
-      var cont = document.createElement("div");
-      cont.classList.add("basic-box");
-      cont.style['margin-top'] = '10px';
-      el.appendChild(cont);
-      
-      cont.style['width'] = '400px';
-      cont.style['height'] = '400px';
-      setupMonaco(cont);
     } else if (data['kind'] === "test-draw") {
       var cont = document.createElement("div");
       cont.classList.add("basic-box");
@@ -453,8 +446,6 @@ export class PythonDFNode extends ServerDependentNode {
     } else {
       cont.innerHTML = "Initialising...";
     }
-    
-    
   }
 
   refresh() {
@@ -489,20 +480,27 @@ export class PythonDFNode extends ServerDependentNode {
     
     this._sym = '_sym_' + az[0];
 
-    const code = data['data']['init_code'];
     const kernels = predecessors
           .filter(o => o.data()["kind"] === "kernel");
+    const codeNode = predecessors
+          .filter(o => o.data()["kind"] === "code");
 
-    if (!code) {
-      throw "expected initialisation code";
-    }
-
-    if (!code.match(/\$sym/)) {
-      throw "initialisation code should have a $sym variable to capture dataframe"
+    if (codeNode.length !== 1) {
+      throw "expected one code node for initisalisation";
     }
 
     if (kernels.length !== 1) {
       throw "expected one kernel";
+    }
+
+    const code = ((codeNode[0].data() || {}).data || {}).code;
+
+    if (!code) {
+      throw "expected initialisation code";
+    }    
+
+    if (!code.match(/\$sym/)) {
+      throw "initialisation code should have a $sym variable to capture dataframe"
     }
 
     const kernelNode = kernels[0].scratch('node');
@@ -539,6 +537,22 @@ function depthFirstFlattenTree(treeItems) {
     }
   }
   return flat;
+}
+
+export class CodeEditorNode extends Node {
+
+  render(el, data, last_value) {
+
+    var cont = document.createElement("div");
+    cont.classList.add("basic-box");
+    cont.style['margin-top'] = '10px';
+    el.appendChild(cont);
+    
+    cont.style['width'] = '400px';
+    cont.style['height'] = '400px';
+    setupMonaco(cont, data.data['language'], data.data['code']);
+  }
+
 }
 
 export class FileSystemNode extends ServerDependentNode {
@@ -714,11 +728,11 @@ void main() {
   
 }
 
-function setupMonaco(el) {
+function setupMonaco(el, language, value) {
 
     let editor = monaco.editor.create(el, {
-      value: "function hello() {\n\talert('Hello world!');\n}",
-      language: "javascript",
+      value: value || "function hello() {\n\talert('Hello world!');\n}",
+      language: language,
       fontFamily: "Roboto Mono",
       fontSize: 14,
       //theme: "vs-dark"

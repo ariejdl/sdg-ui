@@ -236,6 +236,7 @@ export function setupCyto() {
   function setupConf(el) {
     var conf = document.createElement("div");
     conf.classList.add("basic-box");
+    conf['style']['width'] = '200px';
     conf['style']['margin-top'] = '-100px';
     conf['style']['background'] = 'white';
     conf['style']['padding'] = '5px';
@@ -396,6 +397,17 @@ export function addCytoNetwork(cy, calc, initCallback) {
       data: { id: 'x4', kind: 'filesystem', name: 'File System' },
       position: { x: 200, y: 300 } },
     { group: 'nodes',
+      data: { id: 'x9', kind: 'code', name: 'Init Code',
+              data: { language: 'python', code: `
+import pandas as pd
+import numpy as np
+import json
+$sym = pd.DataFrame(np.random.randn(3000, 4), columns=['A1', 'B', 'C3', 'D'])
+$sym['B'][2:10] = 'overwrite test'
+` } },
+      position: { x: 200, y: 350 } },
+    
+    { group: 'nodes',
       data: { id: 'x5', kind: 'notebook', name: 'Notebook' },
       position: { x: 350, y: 200 } },
     { group: 'nodes',
@@ -407,13 +419,7 @@ export function addCytoNetwork(cy, calc, initCallback) {
       position: { x: 500, y: 250 } },
     { group: 'nodes',
       data: { id: 'x8', kind: 'python-dataframe', name: 'Py Dataframe',
-              data: { init_code: `
-import pandas as pd
-import numpy as np
-import json
-$sym = pd.DataFrame(np.random.randn(3000, 4), columns=['A1', 'B', 'C3', 'D'])
-$sym['B'][2:10] = 'overwrite test'
-` } },
+              data: { } },
       position: { x: 350, y: 300 } },
 
     { group: 'nodes',
@@ -466,7 +472,9 @@ $sym['B'][2:10] = 'overwrite test'
     { group: 'edges',
       data: { id: 'x6x7', source: 'x6', target: 'x7' } },
     { group: 'edges',
-      data: { id: 'x2x8', source: 'x2', target: 'x8' } }
+      data: { id: 'x2x8', source: 'x2', target: 'x8' } },
+    { group: 'edges',
+      data: { id: 'x9x8', source: 'x9', target: 'x8' } }
     
   ];
 

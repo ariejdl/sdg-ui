@@ -403,7 +403,7 @@ export function slickgridAsync(el, rows, cols, query) {
     grid.updateRowCount();
     grid.render();
 
-    loadingIndicator.fadeOut();
+    //loadingIndicator.hide();
 
   })
 

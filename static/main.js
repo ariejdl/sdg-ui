@@ -115,6 +115,10 @@ function getStylesheet(url, callback) {
 
 document.addEventListener("DOMContentLoaded", function() {
 
+  if (!isChromium) {
+    return;
+  }
+
   dropdownMenus();
   const cy = setupCyto();
 
