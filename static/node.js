@@ -94,9 +94,9 @@ export class Node {
        if (name === "name") {
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
-  <div>
+  <span>
     Name
-  </div>
+  </span>
   <input style="width:190px;" value="${data['name'] || ''}" />
 </div>
 `;
@@ -116,9 +116,9 @@ export class Node {
          
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
-  <div>
+  <span>
     Kind
-  </div>
+  </span>
   <select style="width:200px;">
     <option>-</option>
     ${nodeOptions}
@@ -155,6 +155,12 @@ export class Node {
 
          row.innerHTML = `
 <div style="display:flex;justify-content:flex-end;">
+  <span class="run-node node-button" title="run node">
+    <img src="/static/images/bootstrap-icons/play-fill.svg" />
+  </span>
+<!--  <span class="node-button" title="stop">
+    <img src="/static/images/bootstrap-icons/stop-fill.svg" />
+  </span> -->
   <span class="node-button" title="full screen">
     <img src="/static/images/bootstrap-icons/arrows-fullscreen.svg" />
   </span>
@@ -167,12 +173,9 @@ export class Node {
   <span class="node-button" title="hide content">
     <img src="/static/images/bootstrap-icons/eye-slash.svg" />
   </span>
-  <span class="run-node node-button" title="run node">
-    <img src="/static/images/bootstrap-icons/play-fill.svg" />
+  <span class="run-node node-button" title="pin/keep open">
+    <img src="/static/images/bootstrap-icons/easel.svg" />
   </span>
-<!--  <span class="node-button" title="stop">
-    <img src="/static/images/bootstrap-icons/stop-fill.svg" />
-  </span> -->
 </div>
 `;
 
@@ -237,9 +240,17 @@ export class Node {
     
   }
 
+  clearRender() {
+    this._renderOpen = false;
+  }
+
   render(el, data, last_value) {
+    this._renderOpen = true;
     // i.e. slickgrid etc.
-    // TODO: regard width/height e.g. restore/maximise
+    // TODO: regard width/height e.g. restore/maximise,
+    // e.g. window.innerWidth etc. if maximised,
+    // may just want 'restore' icon in top right, use esc key too,
+    // keep menu on top
 
     if (data['kind'] === "grid") {
       var cont = document.createElement("div");

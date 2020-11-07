@@ -300,6 +300,11 @@ export function setupCyto() {
     var updateNodes = cy.scratch('update_nodes') || {};
     delete updateNodes[evt.target.id()];
     cy.scratch('update_nodes', updateNodes);
+
+    const scratchNode = evt.target.scratch('node');
+    if (scratchNode) {
+      scratchNode['node'].clearRender();
+    }
   }
 
   cy.on('remove', 'node', remove);
