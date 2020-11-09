@@ -21,6 +21,7 @@ import { slickgridAsync, treeFilter, slickgrid, slickgridTree, SlickgridTree } f
 
 const nodeKinds = [
   "server",
+  "scalar",  
   "kernel",
   "code",
   "text",
@@ -32,7 +33,7 @@ const nodeKinds = [
   "terminal",
   "file-system",
   "notebook",
-  "notebook-cell"
+  "notebook-cell",
 ]
 
 export function getNode(data, calculator) {
@@ -41,6 +42,8 @@ export function getNode(data, calculator) {
     return new ServerNode(data, calculator)
   } else if (data.kind === "kernel") {
     return new KernelNode(data, calculator)
+  } else if (data.kind === "scalar") {
+    return new ScalarNode(data, calculator)
   } else if (data.kind === "grid") {
 
   } else if (data.kind === "code") {
@@ -76,6 +79,10 @@ export class Node {
   init(n) {
   }
 
+  getExtraConf() {
+    return [];
+  }
+
   renderConf(node, data, el) {
 
     // TODO: update cyto node data
@@ -83,21 +90,47 @@ export class Node {
     var conf = document.createElement("div");
     conf.classList.add("basic-box");
     conf.classList.add("node-conf");
+
+    let confItems = [];
+
+    confItems.push(['name', 'input']);
+    confItems.push(['kind']);
+    confItems = confItems.concat(this.getExtraConf());
+    confItems.push(['buttons']);
+
+    const refreshNode = () => {
+      const newNode = getNode(node.data(), this._calculator);
+      node.scratch(
+        'node', { node: newNode });
+      
+      el.innerHTML = "";
+      var cont = document.createElement("div");
+      cont.classList.add("basic-box");
+      cont.innerHTML = "Initialising...";
+      el.appendChild(cont);
+      
+      (newNode.init(node) || Promise.resolve())
+        .then(() => {
+          el.innerHTML = "";
+          node.trigger("tap");
+        });
+    }
     
-    ['name',
-     'kind',
-     'buttons'].forEach((name) => {
+    confItems.forEach(([name, kind]) => {
        var row = document.createElement("div");
        row.classList.add("row");
-       conf.appendChild(row);       
+       conf.appendChild(row);
 
-       if (name === "name") {
+      if (kind === "input") {
+
+        const _data = name === "name" ? data : data.data;
+        
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
   <span>
-    Name
+    ${capitalize(name)}
   </span>
-  <input style="width:190px;" value="${data['name'] || ''}" />
+  <input style="width:190px;" value="${_data[name] || ''}" />
 </div>
 `;
          const input = row.querySelector("input");
@@ -105,7 +138,11 @@ export class Node {
          dom.on(input, 'keyup', throttle(() => {
            const value = input.value || "";
            const data = node.data();
-           data['name'] = value;
+           if (name === 'name') {
+             data[name] = value;
+           } else {
+             data.data[name] = value;
+           }
            node.data(data);
          }, 100));
          
@@ -133,22 +170,7 @@ export class Node {
            const data = node.data();
            data['kind'] = value;
            node.data(data);
-           const newNode = getNode(node.data(), this._calculator);
-           node.scratch(
-             'node', { node: newNode });
-
-           el.innerHTML = "";
-           var cont = document.createElement("div");
-           cont.classList.add("basic-box");
-           cont.innerHTML = "Initialising...";
-           el.appendChild(cont);
-           
-           (newNode.init(node) || Promise.resolve())
-             .then(() => {
-               el.innerHTML = "";
-               node.trigger("tap");
-             })
-           
+           refreshNode();
          });
          
        } else if (name === 'buttons') {
@@ -174,7 +196,10 @@ export class Node {
     <img src="/static/images/bootstrap-icons/eye-slash.svg" />
   </span>
   <span class="run-node node-button" title="pin/keep open">
-    <img src="/static/images/bootstrap-icons/easel.svg" />
+    <img src="/static/images/bootstrap-icons/asterisk.svg" />
+  </span>
+  <span class="refresh-node node-button" title="pin/keep open">
+    <img src="/static/images/bootstrap-icons/arrow-clockwise.svg" />
   </span>
 </div>
 `;
@@ -183,14 +208,13 @@ export class Node {
            const data = node.data();
            this._calculator.evalNode('#' + data['id']);
          });
+
+         dom.on(row.querySelector(".refresh-node"), 'click', refreshNode)
          
          //restore/maximise/pin/run'
        } else {
          row.innerHTML = name;
-}
-
-       
-       
+       }
 
     });
     el.appendChild(conf);    
@@ -199,7 +223,7 @@ export class Node {
   getPreviousValues(predecessors) {
     const lookup = {};
     predecessors.forEach((n) => {
-      const scratchEval = n.scratch("eval");
+      const scratchEval = n.scratch("eval") || {};
       lookup[n.data()['id']] = scratchEval['last_return_value'];
     });
     return lookup;
@@ -314,6 +338,18 @@ export class Node {
 
 export class ServerNode extends Node {
 
+  getExtraConf() {
+    return [['host', 'input']];
+  }
+  
+}
+
+export class ScalarNode extends Node {
+
+  getExtraConf() {
+    return [['value', 'input']];
+  }
+  
 }
 
 
@@ -688,6 +724,10 @@ function depthFirstFlattenTree(treeItems) {
 }
 
 export class CodeEditorNode extends Node {
+
+  getExtraConf() {
+    return [['language', 'input']];
+  }
 
   render(el, data, last_value) {
 

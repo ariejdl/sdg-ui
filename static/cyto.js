@@ -383,6 +383,9 @@ export function addCytoNetwork(cy, calc, initCallback) {
       data: { id: 'x2', kind: 'kernel', name: 'Kernel', data: { 'kernel_name': 'python3' } },
       position: { x: 200, y: 200 } },
     { group: 'nodes',
+      data: { id: 'x10', kind: 'scalar', name: 'notebook path', data: { 'value': '/static/test_data/2016-09-10-jupyter-features.ipynb' } },
+      position: { x: 200, y: 150 } },
+    { group: 'nodes',
       data: { id: 'x3', kind: 'terminal', name: 'Terminal' },
       position: { x: 200, y: 250 } },
     { group: 'nodes',
@@ -463,7 +466,9 @@ $sym['B'][2:10] = 'overwrite test'
     { group: 'edges',
       data: { id: 'x2x8', source: 'x2', target: 'x8' } },
     { group: 'edges',
-      data: { id: 'x9x8', source: 'x9', target: 'x8' } }
+      data: { id: 'x9x8', source: 'x9', target: 'x8' } },
+    { group: 'edges',
+      data: { id: 'x10x5', source: 'x10', target: 'x5' } }
     
   ];
 
