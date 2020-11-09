@@ -58,8 +58,7 @@ export function getNode(data, calculator) {
     return new NotebookCellNode(data, calculator);
   } else if (data.kind === "file-system") {
     return new FileSystemNode(data, calculator);
-  } else if (["kernel", "terminal", "file-system",
-              "notebook", "notebook-cell"].includes(data.kind)) {
+  } else if (["kernel", "terminal", "file-system"].includes(data.kind)) {
     return new ServerDependentNode(data, calculator)
   }
   
@@ -127,7 +126,7 @@ export class Node {
         
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
-  <span>
+  <span class="text">
     ${capitalize(name)}
   </span>
   <input style="width:190px;" value="${_data[name] || ''}" />
@@ -153,7 +152,7 @@ export class Node {
          
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
-  <span>
+  <span class="text">
     Kind
   </span>
   <select style="width:200px;">
@@ -220,23 +219,23 @@ export class Node {
     el.appendChild(conf);    
   }
 
-  getPreviousValues(predecessors) {
+  getPreviousValues(incomers) {
     const lookup = {};
-    predecessors.forEach((n) => {
+    incomers.forEach((n) => {
       const scratchEval = n.scratch("eval") || {};
       lookup[n.data()['id']] = scratchEval['last_return_value'];
     });
     return lookup;
   }
 
-  invoke(node, data, predecessors, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isManual) {
     // i.e. return promise
     var calculator = this._calculator;
 
     if (data.kind === "notebook") {
       // TODO: execute each cell, check if stopped, check if evalId is the same, i.e. do guard check
       // calculator.guardCheck()
-      throw "collect cells";
+      console.log("TODO: collect cells");
 
       // - TODO: make this work cell by cell for a notebook, which is like a sequence of nodes
       // .... e.g. emit custom events/invocations per cell,
@@ -355,8 +354,8 @@ export class ScalarNode extends Node {
 
 export class ServerDependentNode extends Node {
 
-  getServer(predecessors) {
-    const servers = predecessors
+  getServer(incomers) {
+    const servers = incomers
           .map(o => o.data())
           .filter(o => o["kind"] === "server");
 
@@ -368,10 +367,10 @@ export class ServerDependentNode extends Node {
     return servers[0]
   }
 
-  invoke(node, data, predecessors, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isManual) {
 
-    const values = this.getPreviousValues(predecessors);
-    const server = this.getServer(predecessors);
+    const values = this.getPreviousValues(incomers);
+    const server = this.getServer(incomers);
 
     if (!server) {
       throw "no server found";
@@ -412,23 +411,23 @@ export class KernelNode extends ServerDependentNode {
     return this.updateConnection(n);
   }
 
-  invoke(node, data, predecessors, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isManual) {
     // TODO: check this code is right
     
     // if host has changed, update the kernel, the kernel is state
     const updated = this.updateConnection(node);
     if (updated !== undefined) {
       return updated.then(() => {
-        return super.invoke(node, data, predecessors, evalId, isManual);
+        return super.invoke(node, data, incomers, evalId, isManual);
       })
     }
 
-    return super.invoke(node, data, predecessors, evalId, isManual);
+    return super.invoke(node, data, incomers, evalId, isManual);
   }
 
   updateConnection(n) {
-    const predecessors = n.predecessors().filter(o => o.isNode());
-    const server = this.getServer(predecessors);
+    const incomers = n.incomers().filter(o => o.isNode());
+    const server = this.getServer(incomers);
 
     if (!server) {
       return;
@@ -483,8 +482,8 @@ export class NotebookNode extends Node {
 
 export class TextNode extends Node {
 
-  invoke(node, data, predecessors, evalId, isManual) {
-    const values = this.getPreviousValues(predecessors) || {};
+  invoke(node, data, incomers, evalId, isManual) {
+    const values = this.getPreviousValues(incomers) || {};
     
     return new Promise((resolve) => {
       resolve(JSON.stringify(values));
@@ -494,10 +493,10 @@ export class TextNode extends Node {
 
 export class NotebookCellNode extends Node {
 
-  invoke(node, data, predecessors, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isManual) {
 
     const code = data['data']['code'];
-    const kernels = predecessors
+    const kernels = incomers
           .filter(o => o.data()["kind"] === "kernel");
 
     if (!code) {
@@ -528,8 +527,8 @@ export class TerminalNode extends ServerDependentNode {
 
   init(n) {
 
-    const predecessors = n.predecessors().filter(o => o.isNode());
-    const server = this.getServer(predecessors);
+    const incomers = n.incomers().filter(o => o.isNode());
+    const server = this.getServer(incomers);
 
     if (!server) {
       return;
@@ -646,7 +645,7 @@ export class PythonDFNode extends ServerDependentNode {
     });
   }
 
-  invoke(node, data, predecessors, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isManual) {
 
     if (this._initInProgress) {
       return;
@@ -664,9 +663,9 @@ export class PythonDFNode extends ServerDependentNode {
     
     this._sym = '_sym_' + az[0];
 
-    const kernels = predecessors
+    const kernels = incomers
           .filter(o => o.data()["kind"] === "kernel");
-    const codeNode = predecessors
+    const codeNode = incomers
           .filter(o => o.data()["kind"] === "code");
 
     if (codeNode.length !== 1) {
@@ -753,8 +752,8 @@ export class FileSystemNode extends ServerDependentNode {
   }
 
   updateConnection(n) {
-    const predecessors = n.predecessors().filter(o => o.isNode());
-    const server = this.getServer(predecessors);
+    const incomers = n.incomers().filter(o => o.isNode());
+    const server = this.getServer(incomers);
 
     if (!server) {
       return;
@@ -763,9 +762,9 @@ export class FileSystemNode extends ServerDependentNode {
     this._url = "http://" + server.data.host;
   }
 
-  invoke(node, data, predecessors, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isManual) {
     this.updateConnection(node);
-    super.invoke(node, data, predecessors, evalId, isManual);
+    super.invoke(node, data, incomers, evalId, isManual);
   }
 
   render(el, data, last_value) {

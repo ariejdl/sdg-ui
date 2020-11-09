@@ -77,7 +77,7 @@ export class Calculator {
 
     // 1) get outward
 
-    const predecessors = n.predecessors().filter(o => o.isNode());
+    const incomers = n.incomers().filter(o => o.isNode());
 
     // may want to time evaluation, and use a promise here after finishes
     const start = Date.now();
@@ -85,7 +85,7 @@ export class Calculator {
     let success = false;
 
     try {
-      ret = scratchNode.node.invoke(n, data, predecessors, evalId, isManual);
+      ret = scratchNode.node.invoke(n, data, incomers, evalId, isManual);
       success = true;
     } catch (e) {
       console.error("error during node invocation: " + e);

@@ -404,7 +404,7 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   margin-bottom: 5px;
 }
 
-.node-conf > .row span {
+.node-conf > .row .text {
   padding-top: 6px;
   padding-left: 2px;
 }
