@@ -116,8 +116,9 @@ export class Calculator {
         this._evalNode("#" + id, evalId, isManual);
       });
       
-    }).catch((err) => {
-      throw err
+    }).catch((e) => {
+      console.error("error during node invocation: " + e);
+      throw e
     });
     
   }

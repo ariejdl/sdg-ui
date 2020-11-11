@@ -1,7 +1,7 @@
 
 import { throttle, capitalize, dom } from "./utils.js";
 import { KernelHelper } from "./kernel.js";
-import { slickgridAsync, treeFilter, slickgrid, slickgridTree, SlickgridTree } from "./slickgrid.js";
+import { slickgridAsync, treeFilter, SlickgridTree } from "./slickgrid.js";
 
 // TODO: probably best to make this a method on a class:
 //
@@ -27,19 +27,21 @@ const nodeKinds = [
   "text",
   "python-dataframe",
   "terminal",
-  "notebook-cell",
   "file-system",
   "kernel",
   "terminal",
   "file-system",
   "notebook",
-  "notebook-cell",
+  "notebook-cell", // could be a very versatile and useful cell
+  "server-file"
 ]
 
 export function getNode(data, calculator) {
 
   if (data.kind === "server") {
     return new ServerNode(data, calculator)
+  } else if (data.kind === "server-file") {
+    return new ServerFileNode(data, calculator)
   } else if (data.kind === "kernel") {
     return new KernelNode(data, calculator)
   } else if (data.kind === "scalar") {
@@ -56,6 +58,8 @@ export function getNode(data, calculator) {
     return new TerminalNode(data, calculator);	
   } else if (data.kind === "notebook-cell") {
     return new NotebookCellNode(data, calculator);
+  } else if (data.kind === "notebook") {
+    return new NotebookNode(data, calculator);
   } else if (data.kind === "file-system") {
     return new FileSystemNode(data, calculator);
   } else if (["kernel", "terminal", "file-system"].includes(data.kind)) {
@@ -233,21 +237,7 @@ export class Node {
     var calculator = this._calculator;
 
     if (data.kind === "notebook") {
-      // TODO: execute each cell, check if stopped, check if evalId is the same, i.e. do guard check
-      // calculator.guardCheck()
-      console.log("TODO: collect cells");
 
-      // - TODO: make this work cell by cell for a notebook, which is like a sequence of nodes
-      // .... e.g. emit custom events/invocations per cell,
-      // thus decompose a notebook into a chain of promises with sideffects
-      // -> ? getInvokationFunction() ...
-      // ... remember: this may be interrupted too
-      // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
-      
-      return new Promise((resolve, reject) => {
-        console.log('invoke: ' + data.kind)
-        resolve();
-      });
       
     } else if (data.kind === "grid") {
     } else if (data.kind === "tree") {
@@ -283,7 +273,6 @@ export class Node {
       
       cont.style['width'] = '400px';
       cont.style['height'] = '400px';
-      slickgrid(cont);
     } else if (data['kind'] === "tree") {
       var cont = document.createElement("div");
       cont.classList.add("basic-box");
@@ -292,7 +281,6 @@ export class Node {
       
       cont.style['width'] = '400px';
       cont.style['height'] = '400px';
-      slickgridTree(cont);
     } else if (data['kind'] === "test-draw") {
       var cont = document.createElement("div");
       cont.classList.add("basic-box");
@@ -316,19 +304,7 @@ export class Node {
       twgltest(can);
     } else if (data['kind'] === "terminal") {
     } else if (data['kind'] === "notebook") {
-      var cont = document.createElement("div");
-      cont.classList.add("basic-box");
-      cont.style['margin-top'] = '10px';
-      el.appendChild(cont);
-
-      cont.innerHTML = "testing1<br/>testing2<br/>testing3";
     } else if (data['kind'] === "text") {
-      var cont = document.createElement("div");
-      cont.classList.add("basic-box");
-      cont.style['margin-top'] = '10px';
-      el.appendChild(cont);
-
-      cont.innerHTML = last_value
     }
     
   }
@@ -407,6 +383,10 @@ export class KernelNode extends ServerDependentNode {
     super(data, calculator);
   }
 
+  getExtraConf() {
+    return [['kernel-name', 'input']];
+  }
+
   init(n) {
     return this.updateConnection(n);
   }
@@ -443,14 +423,14 @@ export class KernelNode extends ServerDependentNode {
 
     var data = this._data.data || {};
 
-    if (server.data.host && data.kernel_name) {
+    if (server.data.host && data['kernel-name']) {
 
       this._currentHost = undefined;
       this._currentKernel = undefined;
 
       return new Promise((resolve, reject) => {
         
-        const kernel = new KernelHelper(server.data.host, data.kernel_name)
+        const kernel = new KernelHelper(server.data.host, data['kernel-name'])
         kernel.create()
           .then((id) => {
             kernel.connect()
@@ -476,7 +456,94 @@ export class KernelNode extends ServerDependentNode {
 
 }
 
+export class ServerFileNode extends Node {
+
+  constructor(data, calculator) {
+    super(data, calculator);
+    this._currentFileName = undefined;
+    this._currentFile = undefined;
+    this._fetching = false;
+  }
+  
+  getExtraConf() {
+    return [['value', 'input']];
+  }
+
+  init(n) {
+    const fileName = (n.data().data || {}).value;
+
+    if ((this._currentFile === undefined || fileName !== this._currentFile)
+        && fileName && fileName.length &&
+        !this._fetching) {
+
+      this._fetching = true;
+      return fetch(fileName)
+        .then((d) => d.text())
+        .then((data) => {
+          this._currentFileName = fileName;
+          this._currentFile = data;
+          this._fetching = false;
+        })
+    }
+    
+  }
+  
+}
+
 export class NotebookNode extends Node {
+
+  invoke(node, data, incomers, evalId, isManual) {
+    // TODO: execute each cell, check if stopped, check if evalId is the same, i.e. do guard check
+    // calculator.guardCheck()
+    console.log("TODO: collect cells");
+
+    // - TODO: make this work cell by cell for a notebook, which is like a sequence of nodes
+    // .... e.g. emit custom events/invocations per cell,
+    // thus decompose a notebook into a chain of promises with sideffects
+    // -> ? getInvokationFunction() ...
+    // ... remember: this may be interrupted too
+    // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
+
+    const file = incomers.filter(o => o.data()["kind"] === "server-file");
+    this._currentFile = undefined;
+
+    if (file.length > 1) {
+      throw "expected at most one file for notebook";
+    }
+
+    if (file.length === 1) {
+      const fileContent  = file.scratch().node.node._currentFile;
+      if (fileContent) {
+        this._currentFile = JSON.parse(fileContent)
+      }
+    }
+  }
+  
+  render(el, data, last_value) {
+    var cont = document.createElement("div");
+    cont.classList.add("basic-box");
+    cont.style['margin-top'] = '10px';
+
+    cont.style['height'] = '400px';
+    cont.style['width'] = '400px';
+    cont.style['overflow-y'] = 'scroll';
+    
+    el.appendChild(cont);
+
+    if (this._currentFile) {
+      this._currentFile.cells.forEach((cell) => {
+        console.log(cell)
+        const el = dom.ce("div");
+        el.innerHTML = `
+${cell.source.join("\n")}
+${(cell.outputs || []).join("\n")}
+<hr/>
+`;
+        dom.ap(cont, el);
+      });
+    }
+
+  }
   
 }
 
@@ -489,6 +556,16 @@ export class TextNode extends Node {
       resolve(JSON.stringify(values));
     })
   }
+
+  render(el, data, last_value) {
+    var cont = document.createElement("div");
+    cont.classList.add("basic-box");
+    cont.style['margin-top'] = '10px';
+    el.appendChild(cont);
+
+    cont.innerHTML = last_value
+  }
+  
 }
 
 export class NotebookCellNode extends Node {
@@ -745,9 +822,7 @@ export class CodeEditorNode extends Node {
 export class FileSystemNode extends ServerDependentNode {
 
   init(n) {
-
     this._tree = new SlickgridTree();
-    
     return this.updateConnection(n);
   }
 
