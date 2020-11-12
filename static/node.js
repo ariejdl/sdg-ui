@@ -530,8 +530,33 @@ export class NotebookNode extends Node {
     
     el.appendChild(cont);
 
+    // TODO: global actions/buttons
+    // - run all notebook
+    // - run all cells above
+    // - run cell
+    // - restart kernel
+    // - stop/interrupt kernel
+    // - insert cell
+    // - delete cell
+    // - export to python code
+
     if (this._currentFile) {
       this._currentFile.cells.forEach((cell) => {
+
+        // create jupyter notebook cell
+        // input - vs code (e.g. google collab, disconnect renderer?)
+        // output - cell msg_id output or static output
+        //   -> different types of output, images, text, html
+        //   -> TODO: custom events
+        // buttons/actions/info
+        //  - In[] Out[] count
+        //  - run cell
+        //  - insert below
+        //  - insert above (if first cell)
+        //  - change cell type, e.g. code/markdown
+        //  - delete cell
+        
+        
         console.log(cell)
         const el = dom.ce("div");
         el.innerHTML = `
@@ -992,13 +1017,45 @@ void main() {
 
 function setupMonaco(el, language, value) {
 
+  // N.B. need this font loaded before this - otherwise seems to cache wrong value
+  
     let editor = monaco.editor.create(el, {
-      value: value || "function hello() {\n\talert('Hello world!');\n}",
+      value: value || "",
       language: language,
       fontFamily: "Roboto Mono",
       fontSize: 14,
-      //theme: "vs-dark"
+      //theme: "vs-dark"      
+
+      minimap: {
+	enabled: false
+      },
+
+      scrollBeyondLastLine: false,
+
+      // https://stackoverflow.com/questions/53448735/
+      lineNumbers: 'off',
+      glyphMargin: false,
+      folding: false,
+
     });
+
+  monaco.editor.colorize(value, language)
+    .then((d) => {
+      const el2 = dom.ce("div");
+
+      el2.innerHTML = d;
+
+      el2.classList.add("basic-box");
+      el2['style']['padding-left'] = "10px"; // monaco editor has the same
+      el2['style']['margin-top'] = "10px";
+      el2['style']['background'] = "white";
+      el2['style']['font-family'] = "Roboto Mono";
+      el2['style']['font-size'] = '14px';
+      
+      el.appendChild(el2);
+    });
+
+  
   
 }
 
