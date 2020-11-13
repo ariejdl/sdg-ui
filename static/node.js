@@ -512,9 +512,10 @@ export class NotebookCell {
     const _out = dom.ce("div");
     const _outCount = dom.ce("div");
     const _outBody = dom.ce("div");
-    const execCountWidth = 60;
+    const execCountWidth = 120;
 
     el['style']['width'] = '100%';
+    el['style']['font-family'] = 'Roboto Mono';
 
     // TODO: use stylesheet/class
 
@@ -525,6 +526,7 @@ export class NotebookCell {
     });
     [_inCount, _outCount].map((el) => {
       el.style['width'] = `${execCountWidth}px`;
+      el.style['text-align'] = `right`;
     });
     [_inBody, _outBody].map((el) => {
       el.style['width'] = `calc(100% - ${execCountWidth}px)`;
@@ -556,8 +558,9 @@ export class NotebookCell {
     const value = (cell.source || []).join("");
 
     if (cell.cell_type === "code") {
-      new AutoBlurMonaco(_inBody, lang, value);
+      new AutoBlurMonaco(_inBody, lang, value, true);
     } else if (cell.cell_type === "markdown") {
+      _inBody.style['font-family'] = 'Open Sans';
       _inBody.classList.add("rendered_html")
       _inBody.innerHTML = downa.render(value);
     } else {
@@ -615,7 +618,6 @@ export class NotebookCell {
         } else {
           throw `unrecognised cell output type "${obj.output_type}"`;
         }
-
         dom.ap(_outBody, objEl);
         
       });
@@ -684,8 +686,9 @@ export class NotebookNode extends Node {
     cont.classList.add("basic-box");
     cont.style['margin-top'] = '10px';
 
+    cont.style['background'] = 'white';
     cont.style['height'] = '400px';
-    cont.style['width'] = '400px';
+    cont.style['width'] = '600px';
     cont.style['overflow-y'] = 'scroll';
     
     el.appendChild(cont);
@@ -1183,9 +1186,10 @@ class JupyterCell {
 
 class AutoBlurMonaco {
 
-  constructor(el, language, value) {
+  constructor(el, language, value, autoGrow) {
     this._fontSize = 14;
     this.makeStatic(el, language, value);
+    this._autoGrow = !!autoGrow;
   }
 
   makeDynamic(el, language, value) {
@@ -1217,6 +1221,21 @@ class AutoBlurMonaco {
       this.makeStatic(el, language, editor.getModel().getValue());
       editor.dispose();
     });
+
+    if (this._autoGrow) {
+      // https://github.com/microsoft/monaco-editor/issues/794
+      const updateHeight = () => {
+        const rect = el.getBoundingClientRect();
+        const contentHeight = Math.min(1000, editor.getContentHeight());
+        el.style.width = `${rect.width}px`;
+        el.style.height = `${contentHeight}px`;
+        editor.layout({
+          width: rect.width,
+          height: contentHeight
+        });
+      };
+      editor.onDidContentSizeChange(updateHeight);
+    }
 
     this._editor = editor;
     
