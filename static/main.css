@@ -417,6 +417,8 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   margin-bottom: 0px;
 }
 
+.general-form input,
+.general-form select,
 .node-conf input,
 .node-conf select {
   border: 1px solid #ccc;
@@ -444,6 +446,68 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
 
 .node-button:active {
   background: rgba(0, 0, 0, 0.1);
+}
+
+.node-notebook {
+  padding-top: 40px;
+  position: relative;
+  background: white;
+}
+
+.node-notebook .menu-bar {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  height: 28px;
+  background: white;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.25);
+  padding: 10px;
+}
+
+.notebook-cell {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.notebook-cell .left-area {
+  padding: 10px;
+}
+
+.notebook-cell .grey-text {
+  color: #ccc;
+}
+
+.node-notebook .cell-action {
+  border: 1px solid black;
+  border-radius: 2px;
+  display: inline-block;
+  height: 22px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.node-notebook .run-cell {
+  margin-bottom: 10px;
+}
+
+.node-notebook .cell-action > span {
+  line-height: 20px;
+  margin-left: 8px;
+  float: left;
+}
+
+.node-notebook .cell-action:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.node-notebook .cell-action:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.node-notebook .cell-action > img {
+  width: 22px;
+  height: 22px;
 }
 
 .rendered_html {
@@ -562,9 +626,8 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   background-color: #ccc;
 }
 .rendered_html pre {
-  margin: 1em 2em;
   padding: 0px;
-  background-color: #ddd;
+  background-color: #f7f7f7;
 }
 .rendered_html code {
   background-color: #eff0f1;
@@ -573,7 +636,7 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   padding: 1px 5px;
 }
 .rendered_html pre code {
-  background-color: #ddd;
+  background-color: #f7f7f7;
 }
 .rendered_html pre, .rendered_html code {
   border: 0;

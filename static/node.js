@@ -69,6 +69,17 @@ export function getNode(data, calculator) {
   return new Node(data, calculator);
 }
 
+
+const greyBG = '#F7F7F7';
+monaco.editor.defineTheme('grey-bg', {
+  base: 'vs',
+  inherit: true,
+  rules: [{ background: greyBG.slice(1) }],
+  colors: {
+    'editor.background': greyBG
+  }
+});
+
 export class Node {
 
   canScale = true;
@@ -508,14 +519,23 @@ export class NotebookCell {
     const cont = dom.ce("div");
     const _in = dom.ce("div");
     const _inCount = dom.ce("div");
+    const _inCountWrap = dom.ce("div");
+    
     const _inBody = dom.ce("div");
     const _out = dom.ce("div");
     const _outCount = dom.ce("div");
+    const _outCountWrap = dom.ce("div");
+    
     const _outBody = dom.ce("div");
     const execCountWidth = 120;
 
     el['style']['width'] = '100%';
     el['style']['font-family'] = 'Roboto Mono';
+
+    el.classList.add("notebook-cell");
+
+    _inCount.classList.add("left-area");
+    _outCount.classList.add("left-area");
 
     // TODO: use stylesheet/class
 
@@ -532,13 +552,25 @@ export class NotebookCell {
       el.style['width'] = `calc(100% - ${execCountWidth}px)`;
     });
 
-    _inCount.innerHTML = `In&nbsp;[${execCount || '&nbsp;'}]`;
+    _inCount.innerHTML = `
+<div>
+   <div class="run-cell cell-action">
+     <img src="/static/images/bootstrap-icons/play-fill.svg">
+   </div>
+</div>
+<div class="grey-text">In&nbsp;[${execCount || '&nbsp;'}]</div>
+`;
 
     dom.ap(el, cont);
     
     dom.ap(cont, _in);
-    dom.ap(_in, _inCount);
+    dom.ap(_in, _inCountWrap);
+    dom.ap(_inCountWrap, _inCount);
     dom.ap(_in, _inBody);
+
+    dom.on(_inCount.querySelector(".run-cell"), "click", () => {
+      console.log('run cell')
+    });
 
     // create jupyter notebook cell
     // input - vs code (e.g. google collab, disconnect renderer?)
@@ -552,8 +584,6 @@ export class NotebookCell {
     //  - insert above (if first cell)
     //  - change cell type, e.g. code/markdown
     //  - delete cell
-
-    //
 
     const value = (cell.source || []).join("");
 
@@ -570,7 +600,8 @@ export class NotebookCell {
     if (cell.outputs && cell.outputs.length) {
 
       dom.ap(cont, _out);
-      dom.ap(_out, _outCount);
+      dom.ap(_out, _outCountWrap);
+      dom.ap(_outCountWrap, _outCount);
       dom.ap(_out, _outBody);
 
       let outExecCount;
@@ -622,7 +653,7 @@ export class NotebookCell {
         
       });
 
-      _outCount.innerHTML = `Out&nbsp;[${outExecCount || '&nbsp;'}]`;
+      _outCount.innerHTML = `<div class="grey-text">Out&nbsp;[${outExecCount || '&nbsp;'}]</div>`;
     }
 
   }
@@ -682,16 +713,47 @@ export class NotebookNode extends Node {
     
     // 
     
-    var cont = document.createElement("div");
-    cont.classList.add("basic-box");
-    cont.style['margin-top'] = '10px';
+    var cont = dom.ce("div");
+    var contWrap = dom.ce("div");
+    var menu = dom.ce("div");
+    contWrap.classList.add("basic-box");
+    contWrap.classList.add("node-notebook");
+    contWrap.style['margin-top'] = '10px';
+    menu.classList.add("menu-bar");
+    menu.classList.add("general-form");
 
     cont.style['background'] = 'white';
     cont.style['height'] = '400px';
     cont.style['width'] = '600px';
     cont.style['overflow-y'] = 'scroll';
-    
-    el.appendChild(cont);
+
+    dom.ap(el, contWrap);
+    dom.ap(contWrap, cont);
+    dom.ap(contWrap, menu);
+
+    menu.innerHTML = `
+   <div class="run-cell cell-action">
+     <span>Run&nbsp;</span><img src="/static/images/bootstrap-icons/play-fill.svg">
+   </div>
+   <div class="cell-action">
+     <img src="/static/images/bootstrap-icons/stop-fill.svg">
+   </div>
+   <div class="cell-action">
+     <img src="/static/images/bootstrap-icons/arrow-clockwise.svg">
+   </div>
+   <div class="cell-action">
+     <img src="/static/images/bootstrap-icons/plus.svg">
+   </div>
+   <div class="cell-action">
+     <img src="/static/images/bootstrap-icons/dash.svg">
+   </div>
+   <div style="display:inline-block">
+   <select style="float:right;width:100px;height:28px;margin-bottom:-3px;">
+     <option value="code">Code</option>
+     <option value="markdown">Markdown</option>
+   </select>
+   </div>
+`;
 
     // TODO: global actions/buttons
     // - run all notebook
@@ -707,12 +769,6 @@ export class NotebookNode extends Node {
       this._currentFile.cells.forEach((cell) => {
 
         const el = dom.ce("div");
-        /*
-        el.innerHTML = `
-${cell.source.join("\n")}
-${(cell.outputs || []).join("\n")}
-<hr/>
-`;*/
         dom.ap(cont, el);
 
         const obj = new NotebookCell(el, cell, notebookLanguage);
@@ -1200,7 +1256,7 @@ class AutoBlurMonaco {
       fontFamily: "Roboto Mono",
       fontSize: this._fontSize,
       lineHeight: this._fontSize * 1.5,
-      //theme: "vs-dark"      
+      theme: "grey-bg",
 
       minimap: {
 	enabled: false
@@ -1226,7 +1282,7 @@ class AutoBlurMonaco {
       // https://github.com/microsoft/monaco-editor/issues/794
       const updateHeight = () => {
         const rect = el.getBoundingClientRect();
-        const contentHeight = Math.min(1000, editor.getContentHeight());
+        const contentHeight = Math.min(2000, editor.getContentHeight());
         el.style.width = `${rect.width}px`;
         el.style.height = `${contentHeight}px`;
         editor.layout({
@@ -1285,13 +1341,16 @@ class AutoBlurMonaco {
         // add these to scss
         el2['style']['padding-left'] = "10px"; // monaco editor has the same
         //el2['style']['margin-top'] = "10px";
-        el2['style']['background'] = "white";
+        el2.style['background'] = greyBG;        
         el2['style']['font-family'] = "Roboto Mono";
         el2['style']['font-size'] = `${this._fontSize}px`;
         el2['style']['line-height'] = `${this._fontSize * 1.5}px`;
         el2['style']['overflow-x'] = 'hidden';
         el2['style']['white-space'] = 'nowrap';
-        el2['style']['height'] = '100%';
+
+        if (!this._autoGrow) {
+          el2['style']['height'] = '100%';
+        }
         
         el.appendChild(el2);
       });

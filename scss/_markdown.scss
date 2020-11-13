@@ -4,7 +4,7 @@
 
 $text-color: #000;
 $rendered-html-border-color: #ccc;
-$body-bg: #ddd;
+$body-bg: #f7f7f7;
 
 .rendered_html {
 
@@ -59,7 +59,7 @@ $body-bg: #ddd;
     }
 
     pre {
-        margin: 1em 2em;
+        //margin: 1em 2em;
         padding: 0px;
         background-color: $body-bg;
     }
