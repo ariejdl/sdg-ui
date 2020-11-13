@@ -57,11 +57,19 @@
     <script src="/static/libs/monaco/min/vs/editor/editor.main.nls.js"></script>
     <script src="/static/libs/monaco/min/vs/editor/editor.main.js"></script>
 
+    <!-- low priority -->
+    <script src="/node_modules/downa/dist/downa.min.js"></script>
+
     <!-- main -->
     <script type="module" src="/static/main.js"></script>
 
+    
+
   </head>
   <body>
+
+    <!-- to ensure this font is loaded -->
+    <div style="font-family: 'Roboto Mono'; visibility: hidden;">0</div>
 
     <div style="padding:40px;user-select:none;opacity:0.25;">
       <img width="199" src="/static/images/logo-dark.png" style="pointer-events:none;"/>

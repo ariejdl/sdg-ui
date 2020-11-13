@@ -555,6 +555,8 @@ export class NotebookNode extends Node {
         //  - insert above (if first cell)
         //  - change cell type, e.g. code/markdown
         //  - delete cell
+
+        // downa.render('## markdown')
         
         
         console.log(cell)
@@ -833,13 +835,19 @@ export class CodeEditorNode extends Node {
   render(el, data, last_value) {
 
     var cont = document.createElement("div");
-    cont.classList.add("basic-box");
     cont.style['margin-top'] = '10px';
     el.appendChild(cont);
     
+    cont.classList.add("basic-box");
     cont.style['width'] = '400px';
     cont.style['height'] = '400px';
-    setupMonaco(cont, data.data['language'], data.data['code']);
+
+    new AutoBlurMonaco(
+      cont,
+      data.data['language'],
+      data.data['code']
+    );
+    
   }
 
 }
@@ -1015,20 +1023,37 @@ void main() {
   
 }
 
-function setupMonaco(el, language, value) {
+class JupyterCell {
 
-  // N.B. need this font loaded before this - otherwise seems to cache wrong value
+  constructor() {
+  }
   
+}
+
+
+
+class AutoBlurMonaco {
+
+  constructor(el, language, value) {
+    this._fontSize = 14;
+    this.makeStatic(el, language, value);
+  }
+
+  makeDynamic(el, language, value) {
+
     let editor = monaco.editor.create(el, {
       value: value || "",
       language: language,
       fontFamily: "Roboto Mono",
-      fontSize: 14,
+      fontSize: this._fontSize,
+      lineHeight: this._fontSize * 1.5,
       //theme: "vs-dark"      
 
       minimap: {
 	enabled: false
       },
+
+      //automaticLayout: true,
 
       scrollBeyondLastLine: false,
 
@@ -1039,23 +1064,73 @@ function setupMonaco(el, language, value) {
 
     });
 
-  monaco.editor.colorize(value, language)
-    .then((d) => {
-      const el2 = dom.ce("div");
+  editor.onDidBlurEditorWidget(()=>{
+    this.makeStatic(el, language, editor.getModel().getValue());
+    editor.dispose();
+  });
 
-      el2.innerHTML = d;
+    this._editor = editor;
+    
+  }
 
-      el2.classList.add("basic-box");
-      el2['style']['padding-left'] = "10px"; // monaco editor has the same
-      el2['style']['margin-top'] = "10px";
-      el2['style']['background'] = "white";
-      el2['style']['font-family'] = "Roboto Mono";
-      el2['style']['font-size'] = '14px';
-      
-      el.appendChild(el2);
-    });
+  makeStatic(el, language, value) {
 
-  
+    // width, height?
+
+  // N.B. need this font loaded before this - otherwise seems to cache wrong value
+
+    monaco.editor.colorize(value, language)
+      .then((d) => {
+        const el2 = dom.ce("div");
+
+        el2.innerHTML = d;
+
+        dom.on(el2, "click", (e) => {
+
+          // https://stackoverflow.com/questions/3234256/find-mouse-position-relative-to-element
+          const rect = el2.getBoundingClientRect();
+          const x = e.clientX - rect.left; //x position within the element.
+          const y = e.clientY - rect.top;  //y position within the element.
+          
+          el.innerHTML = "";
+          this.makeDynamic(el, language, value);
+
+          // https://microsoft.github.io/monaco-editor/api/enums/monaco.editor.editoroption.html#fontinfo
+          const EDITOR_OPTION_FONT_INFO = 36;
+          const fontInfo = this._editor.getOption(EDITOR_OPTION_FONT_INFO);
+          const fontWidth = fontInfo['typicalHalfwidthCharacterWidth']
+
+          const rowIdx = Math.floor(y / fontInfo.lineHeight) + 1;
+          const colIdx = Math.round(x / fontWidth);
+
+          this._editor.setSelection(
+            new monaco.Selection(
+              rowIdx, colIdx, rowIdx, colIdx
+            )
+          )
+          this._editor.focus();
+          
+          
+        })
+
+        // add these to scss
+        el2['style']['padding-left'] = "10px"; // monaco editor has the same
+        //el2['style']['margin-top'] = "10px";
+        el2['style']['background'] = "white";
+        el2['style']['font-family'] = "Roboto Mono";
+        el2['style']['font-size'] = `${this._fontSize}px`;
+        el2['style']['line-height'] = `${this._fontSize * 1.5}px`;
+        el2['style']['overflow-x'] = 'hidden';
+        el2['style']['white-space'] = 'nowrap';
+        el2['style']['height'] = '100%';
+        
+        el.appendChild(el2);
+      });
+    
+  }
+
+  dispose() {
+  }
   
 }
 

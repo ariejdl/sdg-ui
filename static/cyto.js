@@ -407,7 +407,7 @@ $sym['B'][2:10] = 'overwrite test'
       position: { x: 350, y: 200 } },
     { group: 'nodes',
       data: { id: 'x6', kind: 'notebook-cell', name: 'Notebook Cell',
-              data: { code: '24 ** 3' } },
+              data: { code: 'print("hello 1")\nprint("hello 2")\n24 ** 3' } },
       position: { x: 350, y: 250 } },
     { group: 'nodes',
       data: { id: 'x7', kind: 'text', name: 'Text Rep.' }, // TODO: show value

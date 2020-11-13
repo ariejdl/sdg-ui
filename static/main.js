@@ -131,7 +131,9 @@ document.addEventListener("DOMContentLoaded", function() {
     calc.evalNode('#x1');
   });
 
+  // too general, e.g. doesn't respect monaco editor
   document.addEventListener('keydown', event => {
+    return;
     if (event.key === "x") {
       const sel = cy.$(':selected');
       const len = sel.length;

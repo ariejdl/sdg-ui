@@ -65,6 +65,10 @@ export class KernelHelper {
     if (res.parent_header &&
         res.parent_header.msg_id &&
         res.parent_header.msg_id in this._outstandingRequests) {
+
+
+      console.log('^', res)
+      
       const msg_id = res.parent_header.msg_id;
       const callback = this._outstandingRequests[msg_id];
       callback(res);

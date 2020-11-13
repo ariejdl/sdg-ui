@@ -12,6 +12,7 @@
   "dependencies": {
     "cytoscape-edgehandles": "^3.6.0",
     "cytoscape-popper": "^1.0.7",
+    "downa": "^1.0.1",
     "sass": "^1.26.5"
   }
 }
