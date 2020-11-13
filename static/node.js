@@ -131,7 +131,7 @@ export class Node {
          row.innerHTML = `
 <div style="display:flex;justify-content:space-between;">
   <span class="text">
-    ${capitalize(name)}
+    ${name.split('-').map(capitalize).join(' ')}
   </span>
   <input style="width:190px;" value="${_data[name] || ''}" />
 </div>
@@ -257,7 +257,7 @@ export class Node {
     this._renderOpen = false;
   }
 
-  render(el, data, last_value) {
+  render(n, el, data, last_value) {
     this._renderOpen = true;
     // i.e. slickgrid etc.
     // TODO: regard width/height e.g. restore/maximise,
@@ -490,12 +490,149 @@ export class ServerFileNode extends Node {
   
 }
 
+export class NotebookCell {
+
+  constructor(el, cell, notebookLanguage) {
+    this._el = el;
+    this._cell = cell;
+    this._lang = notebookLanguage;
+  }
+
+  render() {
+    const el = this._el;
+    const cell = this._cell;
+    const lang = this._lang;
+
+    const execCount = cell.execution_count;
+   
+    const cont = dom.ce("div");
+    const _in = dom.ce("div");
+    const _inCount = dom.ce("div");
+    const _inBody = dom.ce("div");
+    const _out = dom.ce("div");
+    const _outCount = dom.ce("div");
+    const _outBody = dom.ce("div");
+    const execCountWidth = 60;
+
+    el['style']['width'] = '100%';
+
+    // TODO: use stylesheet/class
+
+    [_in, _out].map((el) => {
+      el['style']['display'] = 'flex';
+      el['style']['flex-direction'] = 'row';
+      el['style']['align-items'] = 'stretch';
+    });
+    [_inCount, _outCount].map((el) => {
+      el.style['width'] = `${execCountWidth}px`;
+    });
+    [_inBody, _outBody].map((el) => {
+      el.style['width'] = `calc(100% - ${execCountWidth}px)`;
+    });
+
+    _inCount.innerHTML = `In&nbsp;[${execCount || '&nbsp;'}]`;
+
+    dom.ap(el, cont);
+    
+    dom.ap(cont, _in);
+    dom.ap(_in, _inCount);
+    dom.ap(_in, _inBody);
+
+    // create jupyter notebook cell
+    // input - vs code (e.g. google collab, disconnect renderer?)
+    // output - cell msg_id output or static output
+    //   -> different types of output, images, text, html
+    //   -> TODO: custom events
+    // buttons/actions/info
+    //  - In[] Out[] count
+    //  - run cell
+    //  - insert below
+    //  - insert above (if first cell)
+    //  - change cell type, e.g. code/markdown
+    //  - delete cell
+
+    //
+
+    const value = (cell.source || []).join("");
+
+    if (cell.cell_type === "code") {
+      new AutoBlurMonaco(_inBody, lang, value);
+    } else if (cell.cell_type === "markdown") {
+      _inBody.classList.add("rendered_html")
+      _inBody.innerHTML = downa.render(value);
+    } else {
+      throw `unrecognised cell type "${cell.cell_type}"`;
+    }
+
+    if (cell.outputs && cell.outputs.length) {
+
+      dom.ap(cont, _out);
+      dom.ap(_out, _outCount);
+      dom.ap(_out, _outBody);
+
+      let outExecCount;
+      
+      cell.outputs.forEach((obj) => {
+
+        let objEl = dom.ce("div");
+        
+        if (obj.execution_count && outExecCount === undefined) {
+          outExecCount = obj.execution_count;
+        }
+
+        if (obj.output_type === "execute_result" || obj.output_type === "display_data") {
+          if (!('data' in obj)) {
+            throw "expected 'data' key in cell output";
+          }
+          let text
+          let haveOther = false;
+
+          for (const k in obj['data']) {
+            if (k === "text/plain") {
+              text = obj['data']['text/plain'].join('');
+              continue;
+            } else if (!!k.match('^image\/')) {
+              haveOther = true;
+              const img = dom.ce("img")
+              img.alt = text;
+              img.src = `data:${k};base64,${obj['data'][k]}`;
+              dom.ap(objEl, img);
+            } else {
+              throw `unexpected data found in cell output ${k}`;
+            }
+          }
+
+          if (!haveOther) {
+            objEl.innerHTML = text;
+          }
+          
+        } else if (obj.output_type === "stream") {
+          if (!('text' in obj)) {
+            throw "expected 'data' key in cell output";
+          }
+          objEl['style']['white-space'] = 'break-spaces';
+          objEl.innerHTML = obj['text'].join('');
+        } else {
+          throw `unrecognised cell output type "${obj.output_type}"`;
+        }
+
+        dom.ap(_outBody, objEl);
+        
+      });
+
+      _outCount.innerHTML = `Out&nbsp;[${outExecCount || '&nbsp;'}]`;
+    }
+
+  }
+
+}
+
 export class NotebookNode extends Node {
 
-  invoke(node, data, incomers, evalId, isManual) {
+  render(n, el, data, last_value) {
     // TODO: execute each cell, check if stopped, check if evalId is the same, i.e. do guard check
     // calculator.guardCheck()
-    console.log("TODO: collect cells");
+    const incomers = n.incomers().filter(n => n.isNode())
 
     // - TODO: make this work cell by cell for a notebook, which is like a sequence of nodes
     // .... e.g. emit custom events/invocations per cell,
@@ -505,6 +642,8 @@ export class NotebookNode extends Node {
     // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
 
     const file = incomers.filter(o => o.data()["kind"] === "server-file");
+    const kernel = incomers.filter(o => o.data()["kind"] === "kernel");
+    
     this._currentFile = undefined;
 
     if (file.length > 1) {
@@ -517,9 +656,30 @@ export class NotebookNode extends Node {
         this._currentFile = JSON.parse(fileContent)
       }
     }
-  }
-  
-  render(el, data, last_value) {
+
+    if (kernel.length !== 1) {
+      throw "need a single language for notebook from kernel";
+    }
+
+    const kernelName = (kernel[0].data().data || {})['kernel-name'];
+
+    if (!kernelName) {
+      throw "No kernel name for notebook set in kernel";
+    }
+
+    let notebookLanguage;
+    if (!!kernelName.match(/^python/)) {
+      notebookLanguage = "python";
+    } else if (!!kernelName.match(/^javascript/)) {
+      notebookLanguage = "javascript";
+    }
+
+    if (!notebookLanguage) {
+      throw "No matching language from kernel found, e.g. python or javascript.";
+    }
+    
+    // 
+    
     var cont = document.createElement("div");
     cont.classList.add("basic-box");
     cont.style['margin-top'] = '10px';
@@ -543,30 +703,19 @@ export class NotebookNode extends Node {
     if (this._currentFile) {
       this._currentFile.cells.forEach((cell) => {
 
-        // create jupyter notebook cell
-        // input - vs code (e.g. google collab, disconnect renderer?)
-        // output - cell msg_id output or static output
-        //   -> different types of output, images, text, html
-        //   -> TODO: custom events
-        // buttons/actions/info
-        //  - In[] Out[] count
-        //  - run cell
-        //  - insert below
-        //  - insert above (if first cell)
-        //  - change cell type, e.g. code/markdown
-        //  - delete cell
-
-        // downa.render('## markdown')
-        
-        
-        console.log(cell)
         const el = dom.ce("div");
+        /*
         el.innerHTML = `
 ${cell.source.join("\n")}
 ${(cell.outputs || []).join("\n")}
 <hr/>
-`;
+`;*/
         dom.ap(cont, el);
+
+        const obj = new NotebookCell(el, cell, notebookLanguage);
+        obj.render();
+        
+        
       });
     }
 
@@ -584,7 +733,7 @@ export class TextNode extends Node {
     })
   }
 
-  render(el, data, last_value) {
+  render(n, el, data, last_value) {
     var cont = document.createElement("div");
     cont.classList.add("basic-box");
     cont.style['margin-top'] = '10px';
@@ -681,7 +830,7 @@ export class TerminalNode extends ServerDependentNode {
 
   }
   
-  render(el, data, last_value) {
+  render(n, el, data, last_value) {
     var cont = document.createElement("div");
     cont.classList.add("basic-box");
     cont.style['margin-top'] = '10px';
@@ -709,7 +858,7 @@ export class PythonDFNode extends ServerDependentNode {
     this._columns = undefined;
   }
 
-  render(el, data, last_value) {
+  render(n, el, data, last_value) {
     var cont = document.createElement("div");
     cont.classList.add("basic-box");
     cont.style['margin-top'] = '10px';
@@ -832,7 +981,7 @@ export class CodeEditorNode extends Node {
     return [['language', 'input']];
   }
 
-  render(el, data, last_value) {
+  render(n, el, data, last_value) {
 
     var cont = document.createElement("div");
     cont.style['margin-top'] = '10px';
@@ -875,7 +1024,7 @@ export class FileSystemNode extends ServerDependentNode {
     super.invoke(node, data, incomers, evalId, isManual);
   }
 
-  render(el, data, last_value) {
+  render(n, el, data, last_value) {
 
     var cont = document.createElement("div");
     cont.classList.add("basic-box");
@@ -1064,10 +1213,10 @@ class AutoBlurMonaco {
 
     });
 
-  editor.onDidBlurEditorWidget(()=>{
-    this.makeStatic(el, language, editor.getModel().getValue());
-    editor.dispose();
-  });
+    editor.onDidBlurEditorWidget(()=>{
+      this.makeStatic(el, language, editor.getModel().getValue());
+      editor.dispose();
+    });
 
     this._editor = editor;
     
@@ -1093,6 +1242,7 @@ class AutoBlurMonaco {
           const y = e.clientY - rect.top;  //y position within the element.
           
           el.innerHTML = "";
+          el.style['height'] = `${rect.height}px`;
           this.makeDynamic(el, language, value);
 
           // https://microsoft.github.io/monaco-editor/api/enums/monaco.editor.editoroption.html#fontinfo

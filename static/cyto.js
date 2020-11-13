@@ -257,7 +257,7 @@ export function setupCyto() {
 
     scratchNode['node'].renderConf(evt.target, data, el);
 
-    scratchNode['node'].render(el, data, scratchEval['last_return_value']);
+    scratchNode['node'].render(evt.target, el, data, scratchEval['last_return_value']);
     
     var state = evt.target.scratch('state') || {};
     state.el = el;
