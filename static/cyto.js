@@ -257,7 +257,11 @@ export function setupCyto() {
 
     scratchNode['node'].renderConf(evt.target, data, el);
 
-    scratchNode['node'].render(evt.target, el, data, scratchEval['last_return_value']);
+    try {
+      scratchNode['node'].render(evt.target, el, data, scratchEval['last_return_value']);
+    } catch (e) {
+      throw e;
+    }
     
     var state = evt.target.scratch('state') || {};
     state.el = el;
@@ -366,7 +370,7 @@ export function setupCyto() {
   */
 
   // programmatically select
-  
+  // TODO: remove
   cy.$("#a124").select()
   cy.$("#a124").trigger("tap")
 

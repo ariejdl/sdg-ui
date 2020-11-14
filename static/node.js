@@ -215,6 +215,9 @@ export class Node {
   <span class="refresh-node node-button" title="pin/keep open">
     <img src="/static/images/bootstrap-icons/arrow-clockwise.svg" />
   </span>
+  <span class="log-info node-button" title="logging status">
+    <img src="/static/images/bootstrap-icons/card-text.svg" />
+  </span>
 </div>
 `;
 
@@ -247,16 +250,6 @@ export class Node {
     // i.e. return promise
     var calculator = this._calculator;
 
-    if (data.kind === "notebook") {
-
-      
-    } else if (data.kind === "grid") {
-    } else if (data.kind === "tree") {
-    } else if (["kernel", "terminal", "file-system"].includes(data.kind)) {
-
-      
-    }
-
     return new Promise((resolve, reject) => {
       console.log('invoke: ' + data.kind)
       resolve();
@@ -276,23 +269,7 @@ export class Node {
     // may just want 'restore' icon in top right, use esc key too,
     // keep menu on top
 
-    if (data['kind'] === "grid") {
-      var cont = document.createElement("div");
-      cont.classList.add("basic-box");
-      cont.style['margin-top'] = '10px';
-      el.appendChild(cont);
-      
-      cont.style['width'] = '400px';
-      cont.style['height'] = '400px';
-    } else if (data['kind'] === "tree") {
-      var cont = document.createElement("div");
-      cont.classList.add("basic-box");
-      cont.style['margin-top'] = '10px';
-      el.appendChild(cont);
-      
-      cont.style['width'] = '400px';
-      cont.style['height'] = '400px';
-    } else if (data['kind'] === "test-draw") {
+    if (data['kind'] === "test-draw") {
       var cont = document.createElement("div");
       cont.classList.add("basic-box");
       cont.style['margin-top'] = '10px';
@@ -313,9 +290,6 @@ export class Node {
       
       el.appendChild(can);
       twgltest(can);
-    } else if (data['kind'] === "terminal") {
-    } else if (data['kind'] === "notebook") {
-    } else if (data['kind'] === "text") {
     }
     
   }
@@ -501,58 +475,54 @@ export class ServerFileNode extends Node {
   
 }
 
-export class NotebookCell {
+function renderNotebookCell(el, cell, lang, callback) {
+  el.innerHTML = "";
 
-  constructor(el, cell, notebookLanguage) {
-    this._el = el;
-    this._cell = cell;
-    this._lang = notebookLanguage;
-  }
+  const execCount = cell.execution_count;
+  
+  const cont = dom.ce("div");
+  const _in = dom.ce("div");
+  const _inCount = dom.ce("div");
+  const _inCountWrap = dom.ce("div");
+  
+  const _inBody = dom.ce("div");
+  const _out = dom.ce("div");
+  const _outCount = dom.ce("div");
+  const _outCountWrap = dom.ce("div");
 
-  render() {
-    const el = this._el;
-    const cell = this._cell;
-    const lang = this._lang;
+  const _butBelow = dom.ce("div");
+  
+  const _outBody = dom.ce("div");
+  const execCountWidth = 90;
 
-    const execCount = cell.execution_count;
-   
-    const cont = dom.ce("div");
-    const _in = dom.ce("div");
-    const _inCount = dom.ce("div");
-    const _inCountWrap = dom.ce("div");
-    
-    const _inBody = dom.ce("div");
-    const _out = dom.ce("div");
-    const _outCount = dom.ce("div");
-    const _outCountWrap = dom.ce("div");
-    
-    const _outBody = dom.ce("div");
-    const execCountWidth = 120;
+  el['style']['width'] = '100%';
+  el['style']['font-family'] = 'Roboto Mono';
 
-    el['style']['width'] = '100%';
-    el['style']['font-family'] = 'Roboto Mono';
+  el.classList.add("notebook-cell");
 
-    el.classList.add("notebook-cell");
+  dom.on(el, "click", () => {
+    callback("focus");
+  });
 
-    _inCount.classList.add("left-area");
-    _outCount.classList.add("left-area");
+  _inCount.classList.add("left-area");
+  _outCount.classList.add("left-area");
 
-    // TODO: use stylesheet/class
+  // TODO: use stylesheet/class
 
-    [_in, _out].map((el) => {
-      el['style']['display'] = 'flex';
-      el['style']['flex-direction'] = 'row';
-      el['style']['align-items'] = 'stretch';
-    });
-    [_inCount, _outCount].map((el) => {
-      el.style['width'] = `${execCountWidth}px`;
-      el.style['text-align'] = `right`;
-    });
-    [_inBody, _outBody].map((el) => {
-      el.style['width'] = `calc(100% - ${execCountWidth}px)`;
-    });
+  [_in, _out].map((el) => {
+    el['style']['display'] = 'flex';
+    el['style']['flex-direction'] = 'row';
+    el['style']['align-items'] = 'stretch';
+  });
+  [_inCount, _outCount].map((el) => {
+    el.style['width'] = `${execCountWidth}px`;
+    el.style['text-align'] = `right`;
+  });
+  [_inBody, _outBody].map((el) => {
+    el.style['width'] = `calc(100% - ${execCountWidth}px)`;
+  });
 
-    _inCount.innerHTML = `
+  _inCount.innerHTML = `
 <div>
    <div class="run-cell cell-action">
      <img src="/static/images/bootstrap-icons/play-fill.svg">
@@ -561,108 +531,201 @@ export class NotebookCell {
 <div class="grey-text">In&nbsp;[${execCount || '&nbsp;'}]</div>
 `;
 
-    dom.ap(el, cont);
-    
-    dom.ap(cont, _in);
-    dom.ap(_in, _inCountWrap);
-    dom.ap(_inCountWrap, _inCount);
-    dom.ap(_in, _inBody);
+  dom.ap(el, cont);
+  
+  dom.ap(cont, _in);
+  dom.ap(_in, _inCountWrap);
+  dom.ap(_inCountWrap, _inCount);
+  dom.ap(_in, _inBody);
 
-    dom.on(_inCount.querySelector(".run-cell"), "click", () => {
-      console.log('run cell')
+  _butBelow.classList.add("insert-btn")
+  _butBelow.classList.add("cell-action")
+  _butBelow.innerHTML = `<img src="/static/images/bootstrap-icons/plus.svg">`;
+  _butBelow.classList.add("insert-below");
+
+  dom.ap(cont, _butBelow);
+
+  dom.on(_inCount.querySelector(".run-cell"), "click", () => {
+    callback('run cell')
+  });
+
+  // create jupyter notebook cell
+  // input - vs code (e.g. google collab, disconnect renderer?)
+  // output - cell msg_id output or static output
+  //   -> different types of output, images, text, html
+  //   -> TODO: custom events
+  // buttons/actions/info
+  //  - In[] Out[] count
+  //  - run cell
+  //  - insert below
+  //  - insert above (if first cell)
+  //  - change cell type, e.g. code/markdown
+  //  - delete cell
+
+  const value = (cell.source || []).join("");
+
+  if (cell.cell_type === "code") {
+    new AutoBlurMonaco(_inBody, lang, value, true);
+  } else if (cell.cell_type === "markdown") {
+    _inBody.style['font-family'] = 'Open Sans';
+    _inBody.classList.add("rendered_html")
+    _inBody.innerHTML = downa.render(value);
+  } else {
+    throw `unrecognised cell type "${cell.cell_type}"`;
+  }
+
+  if (cell.outputs && cell.outputs.length) {
+
+    dom.ap(cont, _out);
+    dom.ap(_out, _outCountWrap);
+    dom.ap(_outCountWrap, _outCount);
+    dom.ap(_out, _outBody);
+
+    let outExecCount;
+    
+    cell.outputs.forEach((obj) => {
+
+      let objEl = dom.ce("div");
+      
+      if (obj.execution_count && outExecCount === undefined) {
+        outExecCount = obj.execution_count;
+      }
+
+      if (obj.output_type === "execute_result" || obj.output_type === "display_data") {
+        if (!('data' in obj)) {
+          throw "expected 'data' key in cell output";
+        }
+        let text
+        let haveOther = false;
+
+        for (const k in obj['data']) {
+          if (k === "text/plain") {
+            text = obj['data']['text/plain'].join('');
+            continue;
+          } else if (!!k.match('^image\/')) {
+            haveOther = true;
+            const img = dom.ce("img")
+            img.alt = text;
+            img.src = `data:${k};base64,${obj['data'][k]}`;
+            dom.ap(objEl, img);
+          } else {
+            throw `unexpected data found in cell output ${k}`;
+          }
+        }
+
+        if (!haveOther) {
+          objEl.innerHTML = text;
+        }
+        
+      } else if (obj.output_type === "stream") {
+        if (!('text' in obj)) {
+          throw "expected 'data' key in cell output";
+        }
+        objEl['style']['white-space'] = 'break-spaces';
+        objEl.innerHTML = obj['text'].join('');
+      } else {
+        throw `unrecognised cell output type "${obj.output_type}"`;
+      }
+      dom.ap(_outBody, objEl);
+      
     });
 
-    // create jupyter notebook cell
-    // input - vs code (e.g. google collab, disconnect renderer?)
-    // output - cell msg_id output or static output
-    //   -> different types of output, images, text, html
-    //   -> TODO: custom events
-    // buttons/actions/info
-    //  - In[] Out[] count
-    //  - run cell
-    //  - insert below
-    //  - insert above (if first cell)
-    //  - change cell type, e.g. code/markdown
-    //  - delete cell
-
-    const value = (cell.source || []).join("");
-
-    if (cell.cell_type === "code") {
-      new AutoBlurMonaco(_inBody, lang, value, true);
-    } else if (cell.cell_type === "markdown") {
-      _inBody.style['font-family'] = 'Open Sans';
-      _inBody.classList.add("rendered_html")
-      _inBody.innerHTML = downa.render(value);
-    } else {
-      throw `unrecognised cell type "${cell.cell_type}"`;
-    }
-
-    if (cell.outputs && cell.outputs.length) {
-
-      dom.ap(cont, _out);
-      dom.ap(_out, _outCountWrap);
-      dom.ap(_outCountWrap, _outCount);
-      dom.ap(_out, _outBody);
-
-      let outExecCount;
-      
-      cell.outputs.forEach((obj) => {
-
-        let objEl = dom.ce("div");
-        
-        if (obj.execution_count && outExecCount === undefined) {
-          outExecCount = obj.execution_count;
-        }
-
-        if (obj.output_type === "execute_result" || obj.output_type === "display_data") {
-          if (!('data' in obj)) {
-            throw "expected 'data' key in cell output";
-          }
-          let text
-          let haveOther = false;
-
-          for (const k in obj['data']) {
-            if (k === "text/plain") {
-              text = obj['data']['text/plain'].join('');
-              continue;
-            } else if (!!k.match('^image\/')) {
-              haveOther = true;
-              const img = dom.ce("img")
-              img.alt = text;
-              img.src = `data:${k};base64,${obj['data'][k]}`;
-              dom.ap(objEl, img);
-            } else {
-              throw `unexpected data found in cell output ${k}`;
-            }
-          }
-
-          if (!haveOther) {
-            objEl.innerHTML = text;
-          }
-          
-        } else if (obj.output_type === "stream") {
-          if (!('text' in obj)) {
-            throw "expected 'data' key in cell output";
-          }
-          objEl['style']['white-space'] = 'break-spaces';
-          objEl.innerHTML = obj['text'].join('');
-        } else {
-          throw `unrecognised cell output type "${obj.output_type}"`;
-        }
-        dom.ap(_outBody, objEl);
-        
-      });
-
-      _outCount.innerHTML = `<div class="grey-text">Out&nbsp;[${outExecCount || '&nbsp;'}]</div>`;
-    }
-
+    _outCount.innerHTML = `<div class="grey-text">Out&nbsp;[${outExecCount || '&nbsp;'}]</div>`;
   }
 
 }
 
+function getChildNumber(node) {
+  return Array.prototype.indexOf.call(node.parentNode.childNodes, node);
+}
+
 export class NotebookNode extends Node {
 
+  constructor(data, calculator) {
+    super(data, calculator);
+    this._cells = [];
+  }
+
+  serializeNotebook() {
+    return {
+      cells: this._cells || [],
+      metadata: this._metadata || {},
+      nbformat: this._nbformat || 4,
+      nbformat_minor: this._nbformat_minor || 0,
+    }
+  }
+
+  deserializeNotebook(conf) {
+    this._cells = conf.cells || [];
+    this._metadata = conf.metadata;
+    this._nbformat = conf.nbformat;
+    this._nbformat_minor = conf.nbformat_minor;
+  }
+
+  removeFocusCell() {
+    if (this._currentFocus) {
+      const idx = getChildNumber(this._currentFocus);
+      if (this._currentFocus.nextSibling) {
+        this.focusCell(this._currentFocus.nextSibling);
+      } else {
+        this._currentFocus = undefined;
+      }
+      this.removeCell(idx);
+    }
+  }
+
+  addCellBelow(index) {
+  }
+
+  removeCell(index) {
+    if (index < 0 || index > this._cells.length) {
+      throw "invalid index";
+    }
+
+    this._cells.splice(index, 1);
+
+    if (this._renderOpen) {
+      const el = this._currentCont.querySelector(`.notebook-cell:nth-child(${index + 1})`);
+      if (!el) {
+        throw "element not found";
+      }
+      el.parentNode.removeChild(el);
+    }
+  }
+
+  focusCell(el) {
+    if (this._currentFocus) {
+      this._currentFocus.classList.remove("focus");
+    }
+    el.classList.add("focus");
+    this._currentFocus = el;
+  }
+
+  renderCell(cell) {
+    if (!this._renderOpen) {
+      return;
+    }
+
+    const el = dom.ce("div");
+    const cont = this._currentCont;
+    
+    dom.ap(cont, el);
+
+    renderNotebookCell(el, cell, this._notebookLanguage, (event) => {
+      if (event === "focus") {
+        this.focusCell(el);
+      } else if (event === "run cell") {
+        // ...
+      } else if (event === "new above") {
+      } else if (event === "new below") {
+      } else {
+        throw "unrecognised event";
+      }
+    });    
+  }
+
   render(n, el, data, last_value) {
+    super.render(n, el, data, last_value)
     // TODO: execute each cell, check if stopped, check if evalId is the same, i.e. do guard check
     // calculator.guardCheck()
     const incomers = n.incomers().filter(n => n.isNode())
@@ -711,8 +774,6 @@ export class NotebookNode extends Node {
       throw "No matching language from kernel found, e.g. python or javascript.";
     }
     
-    // 
-    
     var cont = dom.ce("div");
     var contWrap = dom.ce("div");
     var menu = dom.ce("div");
@@ -731,9 +792,14 @@ export class NotebookNode extends Node {
     dom.ap(contWrap, cont);
     dom.ap(contWrap, menu);
 
+    this._menu = menu;
+
     menu.innerHTML = `
    <div class="run-cell cell-action">
      <span>Run&nbsp;</span><img src="/static/images/bootstrap-icons/play-fill.svg">
+   </div>
+   <div class="cell-action" title="run all">
+     <img src="/static/images/bootstrap-icons/skip-forward-fill.svg">
    </div>
    <div class="cell-action">
      <img src="/static/images/bootstrap-icons/stop-fill.svg">
@@ -744,37 +810,34 @@ export class NotebookNode extends Node {
    <div class="cell-action">
      <img src="/static/images/bootstrap-icons/plus.svg">
    </div>
-   <div class="cell-action">
+   <div class="remove-cell cell-action" title="remove cell">
      <img src="/static/images/bootstrap-icons/dash.svg">
+   </div>
+   <div class="cell-action" title="convert to code">
+     <img src="/static/images/bootstrap-icons/file-earmark-arrow-down.svg">
    </div>
    <div style="display:inline-block">
    <select style="float:right;width:100px;height:28px;margin-bottom:-3px;">
+     <option value="code">-</option>
      <option value="code">Code</option>
      <option value="markdown">Markdown</option>
    </select>
    </div>
 `;
 
-    // TODO: global actions/buttons
-    // - run all notebook
-    // - run all cells above
-    // - run cell
-    // - restart kernel
-    // - stop/interrupt kernel
-    // - insert cell
-    // - delete cell
-    // - export to python code
+    dom.on(menu.querySelector(".remove-cell"), "click", () => {
+      this.removeFocusCell()
+    });
+
+    this._notebookLanguage = notebookLanguage;
+    this._currentCont = cont;
 
     if (this._currentFile) {
-      this._currentFile.cells.forEach((cell) => {
 
-        const el = dom.ce("div");
-        dom.ap(cont, el);
-
-        const obj = new NotebookCell(el, cell, notebookLanguage);
-        obj.render();
-        
-        
+      this.deserializeNotebook(this._currentFile);
+      
+      this._cells.forEach((cell) => {
+        this.renderCell(cell);
       });
     }
 

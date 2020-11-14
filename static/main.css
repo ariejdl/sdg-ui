@@ -468,6 +468,63 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
 .notebook-cell {
   margin-top: 10px;
   margin-bottom: 10px;
+  padding-top: 10px;
+  padding-bottom: 20px;
+  position: relative;
+}
+
+.notebook-cell.focus {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.notebook-cell .insert-btn {
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  width: 28px;
+  margin-left: -24px;
+  text-align: center;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-family: "Open Sans";
+  border-radius: 2px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.notebook-cell .cell-action.insert-btn {
+  border: 1px solid #f2f2f2;
+  background: white;
+}
+
+.notebook-cell .cell-action.insert-btn:hover {
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+.notebook-cell .cell-action.insert-btn:active {
+  border: 1px solid #ccc;
+  background: #eee;
+}
+
+.notebook-cell .insert-btn > img {
+  width: 22px;
+  height: 22px;
+  opacity: 0.1;
+}
+
+.notebook-cell .cell-action.insert-btn:hover > img {
+  opacity: 0.5;
+}
+
+.notebook-cell.focus:before {
+  content: " ";
+  width: 4px;
+  background: #11dd22;
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
 }
 
 .notebook-cell .left-area {
