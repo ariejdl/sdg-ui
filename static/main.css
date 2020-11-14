@@ -463,6 +463,7 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   background: white;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.25);
   padding: 10px;
+  z-index: 2;
 }
 
 .notebook-cell {

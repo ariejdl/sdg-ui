@@ -545,22 +545,16 @@ function renderNotebookCell(el, cell, lang, callback) {
 
   dom.ap(cont, _butBelow);
 
+  dom.on(_butBelow, "click", (e) => {
+    callback('new below');
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  });
+
   dom.on(_inCount.querySelector(".run-cell"), "click", () => {
     callback('run cell')
   });
-
-  // create jupyter notebook cell
-  // input - vs code (e.g. google collab, disconnect renderer?)
-  // output - cell msg_id output or static output
-  //   -> different types of output, images, text, html
-  //   -> TODO: custom events
-  // buttons/actions/info
-  //  - In[] Out[] count
-  //  - run cell
-  //  - insert below
-  //  - insert above (if first cell)
-  //  - change cell type, e.g. code/markdown
-  //  - delete cell
 
   const value = (cell.source || []).join("");
 
@@ -582,7 +576,7 @@ function renderNotebookCell(el, cell, lang, callback) {
     dom.ap(_out, _outBody);
 
     let outExecCount;
-    
+
     cell.outputs.forEach((obj) => {
 
       let objEl = dom.ce("div");
@@ -674,7 +668,19 @@ export class NotebookNode extends Node {
     }
   }
 
-  addCellBelow(index) {
+  addCell(index) {
+    const obj = {
+      cell_type: "code"
+    };
+    this._cells.splice(index, obj, 0);
+    const el = this.renderCell(obj);
+    const prev = this._currentCont.querySelector(`.notebook-cell:nth-child(${index + 1})`);
+    if (prev) {
+      prev.parentNode.insertBefore(el, prev);
+    } else {
+      dom.ap(this._currentCont, el);
+    }
+    this.focusCell(el);
   }
 
   removeCell(index) {
@@ -707,9 +713,6 @@ export class NotebookNode extends Node {
     }
 
     const el = dom.ce("div");
-    const cont = this._currentCont;
-    
-    dom.ap(cont, el);
 
     renderNotebookCell(el, cell, this._notebookLanguage, (event) => {
       if (event === "focus") {
@@ -718,10 +721,14 @@ export class NotebookNode extends Node {
         // ...
       } else if (event === "new above") {
       } else if (event === "new below") {
+        const idx = getChildNumber(el);
+        this.addCell(idx + 1);
       } else {
         throw "unrecognised event";
       }
-    });    
+    });
+
+    return el;
   }
 
   render(n, el, data, last_value) {
@@ -807,7 +814,7 @@ export class NotebookNode extends Node {
    <div class="cell-action">
      <img src="/static/images/bootstrap-icons/arrow-clockwise.svg">
    </div>
-   <div class="cell-action">
+   <div class="add-cell cell-action">
      <img src="/static/images/bootstrap-icons/plus.svg">
    </div>
    <div class="remove-cell cell-action" title="remove cell">
@@ -825,6 +832,15 @@ export class NotebookNode extends Node {
    </div>
 `;
 
+    dom.on(menu.querySelector(".add-cell"), "click", () => {
+      if (this._currentFocus) {
+        const idx = getChildNumber(this._currentFocus);
+        this.addCell(idx + 1);
+      } else {
+        this.addCell(this._cells.length);
+      }
+    });    
+
     dom.on(menu.querySelector(".remove-cell"), "click", () => {
       this.removeFocusCell()
     });
@@ -833,12 +849,15 @@ export class NotebookNode extends Node {
     this._currentCont = cont;
 
     if (this._currentFile) {
-
-      this.deserializeNotebook(this._currentFile);
-      
-      this._cells.forEach((cell) => {
-        this.renderCell(cell);
-      });
+      // async draw
+      setTimeout(() => {
+        this.deserializeNotebook(this._currentFile);
+        
+        this._cells.forEach((cell) => {
+          const el = this.renderCell(cell);
+          dom.ap(this._currentCont, el);
+        });
+      }, 0);
     }
 
   }
