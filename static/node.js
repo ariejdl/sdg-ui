@@ -688,10 +688,14 @@ export class NotebookNode extends Node {
     this.focusCell(obj.el);
   }
 
-  removeCell(index) {
-    if (index < 0 || index > this._cells.length) {
+  validateIndex(index) {
+    if (index < 0 || index > this._cells.length - 1) {
       throw "invalid index";
     }
+  }
+
+  removeCell(index) {
+    this.validateIndex(index);
 
     this._cells.splice(index, 1);
 
@@ -705,6 +709,13 @@ export class NotebookNode extends Node {
   }
 
   focusCell(el) {
+    const idx = getChildNumber(el);
+    this.validateIndex(idx);
+
+    // update cell type
+    const selCellType = this._menu.querySelector(".cell-type");
+    selCellType.value = (this._cells[idx].cell.cell_type || "code");
+    
     if (this._currentFocus) {
       this._currentFocus.classList.remove("focus");
     }
@@ -714,15 +725,21 @@ export class NotebookNode extends Node {
 
   clearRender() {
     super.clearRender();
+    this._currentFocus = undefined;
     this.saveCells();
+  }
+
+  updateCellSource(obj) {
+    if (obj.obj && obj.obj.editor) {
+      const value = obj.obj.editor.getValue();
+      const lines = (value || "").split("\n")
+      obj.cell.source = lines.map((v, i) => v + (i < lines.length - 1 ? "\n" : ""))
+    }
   }
 
   saveCells() {
     this._cells.map((obj) => {
-      if (obj.obj && obj.obj.editor) {
-        const value = obj.obj.editor.getValue();
-        obj.cell.source = (value || "").split("\n").map(v => v + "\n")
-      }
+      this.updateCellSource(obj);
     })
   }
 
@@ -850,8 +867,8 @@ export class NotebookNode extends Node {
      <img src="/static/images/bootstrap-icons/file-earmark-arrow-down.svg">
    </div>
    <div style="display:inline-block">
-   <select style="float:right;width:100px;height:28px;margin-bottom:-3px;">
-     <option value="code">-</option>
+   <select class="cell-type" style="float:right;width:100px;height:28px;margin-bottom:-3px;">
+     <option value="">-</option>
      <option value="code">Code</option>
      <option value="markdown">Markdown</option>
    </select>
@@ -870,6 +887,23 @@ export class NotebookNode extends Node {
     dom.on(menu.querySelector(".remove-cell"), "click", () => {
       this.removeFocusCell()
     });
+
+    dom.on(menu.querySelector(".cell-type"), "change", (e) => {
+      if (!this._currentFocus) {
+        return;
+      }
+
+      const value = e.target.value || "code";
+      const idx = getChildNumber(this._currentFocus);
+      this.validateIndex(idx);
+      const cell = this._cells[idx];
+      this.updateCellSource(cell);
+      cell.cell["cell_type"] = value;
+      const newCell = this.renderCell(cell.cell);
+      cell.obj.el.parentNode.replaceChild(newCell.el, cell.obj.el);
+      cell.obj = newCell;
+      this.focusCell(newCell.el);      
+    });    
 
     this._notebookLanguage = notebookLanguage;
     this._currentCont = cont;
