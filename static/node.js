@@ -557,9 +557,10 @@ function renderNotebookCell(el, cell, lang, callback) {
   });
 
   const value = (cell.source || []).join("");
+  let editor;
 
   if (cell.cell_type === "code") {
-    new AutoBlurMonaco(_inBody, lang, value, true);
+    editor = new AutoBlurMonaco(_inBody, lang, value, true);
   } else if (cell.cell_type === "markdown") {
     _inBody.style['font-family'] = 'Open Sans';
     _inBody.classList.add("rendered_html")
@@ -627,6 +628,8 @@ function renderNotebookCell(el, cell, lang, callback) {
     _outCount.innerHTML = `<div class="grey-text">Out&nbsp;[${outExecCount || '&nbsp;'}]</div>`;
   }
 
+  
+  return editor
 }
 
 function getChildNumber(node) {
@@ -642,7 +645,7 @@ export class NotebookNode extends Node {
 
   serializeNotebook() {
     return {
-      cells: this._cells || [],
+      cells: (this._cells || []).map(o => o.cell),
       metadata: this._metadata || {},
       nbformat: this._nbformat || 4,
       nbformat_minor: this._nbformat_minor || 0,
@@ -650,7 +653,7 @@ export class NotebookNode extends Node {
   }
 
   deserializeNotebook(conf) {
-    this._cells = conf.cells || [];
+    this._cells = (conf.cells || []).map(c => ({ cell: c }));
     this._metadata = conf.metadata;
     this._nbformat = conf.nbformat;
     this._nbformat_minor = conf.nbformat_minor;
@@ -669,18 +672,20 @@ export class NotebookNode extends Node {
   }
 
   addCell(index) {
-    const obj = {
-      cell_type: "code"
+    const cell = { cell_type: "code" };
+    const obj = this.renderCell(cell);
+    const cellObj = {
+      obj: obj,
+      cell: cell
     };
-    this._cells.splice(index, obj, 0);
-    const el = this.renderCell(obj);
+    this._cells.splice(index, 0, cellObj);
     const prev = this._currentCont.querySelector(`.notebook-cell:nth-child(${index + 1})`);
     if (prev) {
-      prev.parentNode.insertBefore(el, prev);
+      prev.parentNode.insertBefore(obj.el, prev);
     } else {
-      dom.ap(this._currentCont, el);
+      dom.ap(this._currentCont, obj.el);
     }
-    this.focusCell(el);
+    this.focusCell(obj.el);
   }
 
   removeCell(index) {
@@ -707,6 +712,20 @@ export class NotebookNode extends Node {
     this._currentFocus = el;
   }
 
+  clearRender() {
+    super.clearRender();
+    this.saveCells();
+  }
+
+  saveCells() {
+    this._cells.map((obj) => {
+      if (obj.obj && obj.obj.editor) {
+        const value = obj.obj.editor.getValue();
+        obj.cell.source = (value || "").split("\n").map(v => v + "\n")
+      }
+    })
+  }
+
   renderCell(cell) {
     if (!this._renderOpen) {
       return;
@@ -714,7 +733,7 @@ export class NotebookNode extends Node {
 
     const el = dom.ce("div");
 
-    renderNotebookCell(el, cell, this._notebookLanguage, (event) => {
+    const editor = renderNotebookCell(el, cell, this._notebookLanguage, (event) => {
       if (event === "focus") {
         this.focusCell(el);
       } else if (event === "run cell") {
@@ -728,7 +747,10 @@ export class NotebookNode extends Node {
       }
     });
 
-    return el;
+    return {
+      el: el,
+      editor: editor
+    };
   }
 
   render(n, el, data, last_value) {
@@ -744,21 +766,25 @@ export class NotebookNode extends Node {
     // ... remember: this may be interrupted too
     // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
 
-    const file = incomers.filter(o => o.data()["kind"] === "server-file");
-    const kernel = incomers.filter(o => o.data()["kind"] === "kernel");
-    
-    this._currentFile = undefined;
+    if (!this._initFile) {
+      const file = incomers.filter(o => o.data()["kind"] === "server-file");
+      
+      this._currentFile = undefined;
 
-    if (file.length > 1) {
-      throw "expected at most one file for notebook";
-    }
+      if (file.length > 1) {
+        throw "expected at most one file for notebook";
+      }
 
-    if (file.length === 1) {
-      const fileContent  = file.scratch().node.node._currentFile;
-      if (fileContent) {
-        this._currentFile = JSON.parse(fileContent)
+      if (file.length === 1) {
+        const fileContent  = file.scratch().node.node._currentFile;
+        if (fileContent) {
+          this._currentFile = JSON.parse(fileContent)
+          this._initFile = true;
+        }
       }
     }
+
+    const kernel = incomers.filter(o => o.data()["kind"] === "kernel");
 
     if (kernel.length !== 1) {
       throw "need a single language for notebook from kernel";
@@ -849,13 +875,17 @@ export class NotebookNode extends Node {
     this._currentCont = cont;
 
     if (this._currentFile) {
+      this.deserializeNotebook(this._currentFile);
+      this._currentFile = undefined;
+    }
+
+    if (this._cells) {
       // async draw
       setTimeout(() => {
-        this.deserializeNotebook(this._currentFile);
-        
         this._cells.forEach((cell) => {
-          const el = this.renderCell(cell);
-          dom.ap(this._currentCont, el);
+          const obj = this.renderCell(cell.cell);
+          cell.obj = obj;
+          dom.ap(this._currentCont, obj.el);
         });
       }, 0);
     }
@@ -1330,7 +1360,17 @@ class AutoBlurMonaco {
     this._autoGrow = !!autoGrow;
   }
 
+  getValue() {
+    if (this._value !== undefined) {
+      return this._value;
+    } else {
+      return this._editor.getModel().getValue()
+    }
+  }
+
   makeDynamic(el, language, value) {
+
+    this._value = undefined;
 
     let editor = monaco.editor.create(el, {
       value: value || "",
@@ -1383,7 +1423,9 @@ class AutoBlurMonaco {
 
     // width, height?
 
-  // N.B. need this font loaded before this - otherwise seems to cache wrong value
+    // N.B. need this font loaded before this - otherwise seems to cache wrong value
+    this._value = value || "";
+    this._editor = undefined;
 
     monaco.editor.colorize(value, language)
       .then((d) => {
