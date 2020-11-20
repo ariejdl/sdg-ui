@@ -523,9 +523,10 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   width: 4px;
   background: #11dd22;
   position: absolute;
-  top: 0px;
-  bottom: 0px;
-  left: 0px;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  border-radius: 4px;
 }
 
 .notebook-cell .left-area {

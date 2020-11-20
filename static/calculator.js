@@ -17,9 +17,9 @@ export class Calculator {
     this._stopped = false;
   }
 
-  evalNode(id, isManual) {
+  evalNode(id, isForced, isManual) {
     this._stopped = false;
-    this._evalNode(id, ++this._currentEvalIncrement, isManual);
+    this._evalNode(id, ++this._currentEvalIncrement, isForced, isManual);
   }
 
   stop() {
@@ -40,7 +40,9 @@ export class Calculator {
     return false
   }
 
-  _evalNode(id, evalId, isManual) {
+  _evalNode(id, evalId, _isForced, isManual) {
+
+    const isForced = _isForced || isManual;
 
     if (this.guardCheck(evalId)) {
       return;
@@ -56,7 +58,7 @@ export class Calculator {
     const isAutoNode = (data['run_auto'] || 'auto') === 'auto';
 
     // check if auto/manual/undefined, and evaluation/invocation if manual    
-    if (!isAutoNode && !isManual) {
+    if (!isAutoNode && !isForced) {
       console.log('manual node not evaluated as evaluation is auto')
       return;
     }
@@ -85,7 +87,7 @@ export class Calculator {
     let success = false;
 
     try {
-      ret = scratchNode.node.invoke(n, data, incomers, evalId, isManual);
+      ret = scratchNode.node.invoke(n, data, incomers, evalId, isForced);
       success = true;
     } catch (e) {
       console.error("error during node invocation: " + e);
@@ -113,7 +115,7 @@ export class Calculator {
 
       outgoers.forEach((obj) => {
         const id = obj.data()["id"];
-        this._evalNode("#" + id, evalId, isManual);
+        this._evalNode("#" + id, evalId, isForced);
       });
       
     }).catch((e) => {

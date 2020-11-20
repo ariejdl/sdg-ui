@@ -246,7 +246,7 @@ export class Node {
     return lookup;
   }
 
-  invoke(node, data, incomers, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isForced) {
     // i.e. return promise
     var calculator = this._calculator;
 
@@ -328,7 +328,7 @@ export class ServerDependentNode extends Node {
     return servers[0]
   }
 
-  invoke(node, data, incomers, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isForced) {
 
     const values = this.getPreviousValues(incomers);
     const server = this.getServer(incomers);
@@ -376,18 +376,18 @@ export class KernelNode extends ServerDependentNode {
     return this.updateConnection(n);
   }
 
-  invoke(node, data, incomers, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isForced) {
     // TODO: check this code is right
     
     // if host has changed, update the kernel, the kernel is state
     const updated = this.updateConnection(node);
     if (updated !== undefined) {
       return updated.then(() => {
-        return super.invoke(node, data, incomers, evalId, isManual);
+        return super.invoke(node, data, incomers, evalId, isForced);
       })
     }
 
-    return super.invoke(node, data, incomers, evalId, isManual);
+    return super.invoke(node, data, incomers, evalId, isForced);
   }
 
   updateConnection(n) {
@@ -641,8 +641,119 @@ export class NotebookNode extends Node {
   constructor(data, calculator) {
     super(data, calculator);
     this._cells = [];
+
+    this._running = false;
+    this._cellRunIdx = 0;
   }
 
+  invoke(node, data, incomers, evalId, isForced) {
+
+    // deserialise notebook if available
+    if (!this._initFile) {
+      const file = incomers.filter(o => o.data()["kind"] === "server-file");
+      
+      this._currentFile = undefined;
+
+      if (file.length > 1) {
+        throw "expected at most one file for notebook";
+      }
+
+      if (file.length === 1) {
+        const fileContent  = file.scratch().node.node._currentFile;
+        if (fileContent) {
+          this._currentFile = JSON.parse(fileContent)
+          this._initFile = true;
+        }
+      }
+    }
+
+    if (this._currentFile) {
+      this.deserializeNotebook(this._currentFile);
+      this._currentFile = undefined;
+    }    
+
+    if (!isForced) {
+      return;
+    }
+
+    this._currentKernelHelper = undefined;
+
+    const kernels = incomers
+          .filter(o => o.data()["kind"] === "kernel");
+
+    if (kernels.length !== 1) {
+      throw "expected one kernel";
+    }
+
+    const kernelNode = kernels[0].scratch('node');
+    const kernelHelper = kernelNode.node._currentKernel;
+    this._currentKernelHelper = kernelHelper;
+
+    this.runAllCells(evalId)
+  }
+
+  stopRun() {
+    this._running = false;
+  }
+
+  _getNextCodeCell(minIdx) {
+    for (var i = minIdx; i < this._cells.length; i++) {
+      const cell = this._cells[i];
+      if (cell && cell.cell && cell.cell.cell_type === "code") {
+        return i;
+      }
+    }
+  }
+
+  runAllCells(evalId) {
+    // - effectively a mini calculator
+    // - run the code cells sequentially
+
+    this._running = true;
+    this._cellRunIdx = 0;
+
+    return this._runCellContinuous(evalId);
+  }
+
+  _runCellContinuous(evalId) {
+    // stop
+    if (!this._running || this._calculator.guardCheck(evalId)) {
+      return;
+    }
+    
+    const nextIdx = this._getNextCodeCell(this._cellRunIdx);
+    // no more cells
+    if (nextIdx === undefined) {
+      return;
+    }
+    this._cellRunIdx++;
+
+    const cell = this._cells[nextIdx];
+    return this.runCell(cell).then(() => {
+      this._runCellContinuous(evalId);
+    });
+  }
+
+  runCell(cell) {
+
+    if (!this._currentKernelHelper) {
+      throw "no kernel to run cell on";
+    }
+    
+    // - return this._currentKernelHelper.execCodeSimple();
+    // - update output, cell config
+    // - watch for exceptions
+    const code = (cell.cell.source || []).join("");
+    return this._currentKernelHelper.execCodeSimple(code, "-")
+      .then((res) => {
+        console.log('^^^', cell, res)
+        return;
+      })
+    
+
+    
+  }
+  
   serializeNotebook() {
     return {
       cells: (this._cells || []).map(o => o.cell),
@@ -783,24 +894,6 @@ export class NotebookNode extends Node {
     // ... remember: this may be interrupted too
     // ... remember: it's probably best to stop notebooks creating invocation loops of themselves
 
-    if (!this._initFile) {
-      const file = incomers.filter(o => o.data()["kind"] === "server-file");
-      
-      this._currentFile = undefined;
-
-      if (file.length > 1) {
-        throw "expected at most one file for notebook";
-      }
-
-      if (file.length === 1) {
-        const fileContent  = file.scratch().node.node._currentFile;
-        if (fileContent) {
-          this._currentFile = JSON.parse(fileContent)
-          this._initFile = true;
-        }
-      }
-    }
-
     const kernel = incomers.filter(o => o.data()["kind"] === "kernel");
 
     if (kernel.length !== 1) {
@@ -908,10 +1001,7 @@ export class NotebookNode extends Node {
     this._notebookLanguage = notebookLanguage;
     this._currentCont = cont;
 
-    if (this._currentFile) {
-      this.deserializeNotebook(this._currentFile);
-      this._currentFile = undefined;
-    }
+
 
     if (this._cells) {
       // async draw
@@ -930,7 +1020,7 @@ export class NotebookNode extends Node {
 
 export class TextNode extends Node {
 
-  invoke(node, data, incomers, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isForced) {
     const values = this.getPreviousValues(incomers) || {};
     
     return new Promise((resolve) => {
@@ -951,15 +1041,10 @@ export class TextNode extends Node {
 
 export class NotebookCellNode extends Node {
 
-  invoke(node, data, incomers, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isForced) {
 
-    const code = data['data']['code'];
     const kernels = incomers
           .filter(o => o.data()["kind"] === "kernel");
-
-    if (!code) {
-      return;
-    }
 
     if (kernels.length !== 1) {
       throw "expected one kernel";
@@ -969,10 +1054,7 @@ export class NotebookCellNode extends Node {
     const kernelHelper = kernelNode.node._currentKernel;
 
     if (kernelHelper) {
-      return kernelHelper.execCodeSimple(code)
-        .then((res) => {
-          return res;
-        });
+      // TODO: invoke cell
     }
   }
   
@@ -1103,7 +1185,7 @@ export class PythonDFNode extends ServerDependentNode {
     });
   }
 
-  invoke(node, data, incomers, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isForced) {
 
     if (this._initInProgress) {
       return;
@@ -1224,9 +1306,9 @@ export class FileSystemNode extends ServerDependentNode {
     this._url = "http://" + server.data.host;
   }
 
-  invoke(node, data, incomers, evalId, isManual) {
+  invoke(node, data, incomers, evalId, isForced) {
     this.updateConnection(node);
-    super.invoke(node, data, incomers, evalId, isManual);
+    super.invoke(node, data, incomers, evalId, isForced);
   }
 
   render(n, el, data, last_value) {
