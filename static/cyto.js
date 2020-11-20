@@ -387,7 +387,16 @@ export function addCytoNetwork(cy, calc, initCallback) {
       data: { id: 'x2', kind: 'kernel', name: 'Kernel', data: { 'kernel-name': 'python3' } },
       position: { x: 200, y: 200 } },
     { group: 'nodes',
-      data: { id: 'x10', kind: 'server-file', name: 'notebook file', data: { 'value': '/static/test_data/2016-09-10-jupyter-features.ipynb' } },
+      data: { id: 'x10', kind: 'server-file', name: 'notebook file', data: {
+//        'value': '/static/test_data/2015-09-08-SpeedBenchmarks.ipynb'
+//        'value': '/static/test_data/2015-09-29-NumpyTipsAndTricks1.ipynb'
+//        'value': '/static/test_data/2015-09-30-NumpyTipsAndTricks2.ipynb'
+//        'value': '/static/test_data/2016-02-15-TestingLibFM.ipynb'
+//        'value': '/static/test_data/2016-09-10-jupyter-features.ipynb'
+//        'value': '/static/test_data/running code.ipynb'
+        'value': '/static/test_data/01_06_Errors_and_Debugging.ipynb'
+//        'value': '/static/test_data/AppendableList.ipynb'
+      } },
       position: { x: 200, y: 150 } },
     { group: 'nodes',
       data: { id: 'x3', kind: 'terminal', name: 'Terminal' },

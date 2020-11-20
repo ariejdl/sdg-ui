@@ -2,6 +2,7 @@
 import { throttle, capitalize, dom } from "./utils.js";
 import { KernelHelper } from "./kernel.js";
 import { slickgridAsync, treeFilter, SlickgridTree } from "./slickgrid.js";
+import { escape, ansiSpan } from "./ansi.js";
 
 // TODO: probably best to make this a method on a class:
 //
@@ -18,6 +19,9 @@ import { slickgridAsync, treeFilter, SlickgridTree } from "./slickgrid.js";
 //
 // instantiate this node on cytoscape node at creation time or when kind is changed
 //
+
+
+
 
 const nodeKinds = [
   "server",
@@ -614,13 +618,20 @@ function renderNotebookCell(el, cell, lang, callback) {
         if (!('data' in obj)) {
           throw "expected 'data' key in cell output";
         }
-        let text
+        let text;
         let haveOther = false;
 
         for (const k in obj['data']) {
           if (k === "text/plain") {
             text = obj['data']['text/plain'].join('');
-            continue;
+          } else if (k === "application/javascript") {
+            haveOther = true;
+            const v = obj['data']['application/javascript'].join('');
+            objEl.innerHTML = `<pre><code>${v}</code></pre>`;
+          } else if (k === "text/html") {
+            haveOther = true;
+            const v = obj['data']['text/html'].join('');
+            objEl.innerHTML = v;
           } else if (!!k.match('^image\/')) {
             haveOther = true;
             const img = dom.ce("img")
@@ -645,6 +656,10 @@ function renderNotebookCell(el, cell, lang, callback) {
         }
         objEl['style']['white-space'] = 'break-spaces';
         objEl.innerHTML = obj['text'].join('');
+      } else if (obj.output_type === "error") {
+        objEl['style']['white-space'] = 'break-spaces';
+        //objEl.innerHTML = ansiHTML(obj.traceback.join(""))
+        objEl.innerHTML = ansiSpan(escape(obj.traceback.join("")))
       } else {
         throw `unrecognised cell output type "${obj.output_type}"`;
       }
@@ -688,8 +703,11 @@ export class NotebookNode extends Node {
       if (file.length === 1) {
         const fileContent  = file.scratch().node.node._currentFile;
         if (fileContent) {
-          this._currentFile = JSON.parse(fileContent)
-          this._initFile = true;
+          try {
+            this._currentFile = JSON.parse(fileContent)
+            this._initFile = true;
+          } catch (e) {
+          }
         }
       }
     }
@@ -797,7 +815,12 @@ export class NotebookNode extends Node {
         }
 
         if (anyErrors) {
-          newOutputs = [errorObj];
+          newOutputs = [{
+            traceback: errorObj['traceback'],
+            evalue: errorObj['evalue'],
+            ename: errorObj['ename'],
+            output_type: 'error'
+          }];
         } else {
           
         }

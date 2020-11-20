@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   addCytoNetwork(cy, calc, () => {
     // test eval
-    calc.evalNode('#x1', false);
+    calc.evalNode('#x1', true);
   });
 
   // too general, e.g. doesn't respect monaco editor

@@ -43,6 +43,7 @@
 }
 
 $default-font: 'Open Sans';
+$mono-font: 'Open Sans';
 
 @import "dropdown";
 @import "slickgrid";
@@ -62,6 +63,10 @@ body {
     font-family: $default-font;
     overflow: hidden;
     overscroll-behavior-x: none;
+}
+
+pre, code {
+    font-family: $mono-font, monospace;
 }
 
 h1 {
