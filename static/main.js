@@ -1,6 +1,5 @@
 
 import { uuid } from "./utils.js";
-import { testing } from "./old_test.js";
 import { Calculator } from "./calculator.js";
 import { addCytoNetwork, setupCyto } from "./cyto.js";
 
@@ -128,7 +127,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   addCytoNetwork(cy, calc, () => {
     // test eval
-    calc.evalNode('#x1', true);
+    calc.evalNode('#x1', false);
   });
 
   // too general, e.g. doesn't respect monaco editor
@@ -143,9 +142,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
   
-  //testing()
-
   calc.evalNode('#a123');
-
+  
   
 });

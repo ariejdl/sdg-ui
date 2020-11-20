@@ -65,9 +65,6 @@ export class KernelHelper {
     if (res.parent_header &&
         res.parent_header.msg_id &&
         res.parent_header.msg_id in this._outstandingRequests) {
-
-
-      console.log('^', res)
       
       const msg_id = res.parent_header.msg_id;
       const callback = this._outstandingRequests[msg_id];
@@ -76,35 +73,34 @@ export class KernelHelper {
   }
 
   shutdown() {
+    // TODO:
   }
 
   execCodeSimple(code, return_msg) {
     return new Promise((resolve, reject) => {
+      //  execute_reply is the end, execute_result may have data, as may stream, need it all however
       return this.requestReply(
         "execute_request",
-        return_msg || "execute_result",
+        "execute_reply",
         {
           "code": code,
-          "silent":false,
-          "store_history":true,
-          "user_expressions":{},
-          "allow_stdin":true,
-          "stop_on_error":true
+          "silent": false,
+          "store_history": true,
+          "user_expressions": {},
+          "allow_stdin": true,
+          "stop_on_error": true
         }
       ).then((responses) => {
-        const res = responses[responses.length - 1];
-        let found = false;
-        if (res.content && res.content.data) {
-          const data = res.content.data
-          for (const k in data) {
-            resolve(data[k])
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          resolve();
-        }
+
+        const results = responses
+              .filter(msg => msg.msg_type === "execute_result")
+              .map((res) => res.content.data);
+        
+        resolve({
+          result: results.length === 1 ? results[0] : undefined,
+          responses: responses.filter((msg, i) => msg.msg_type !== "status")
+        });
+        
       });
 
     });

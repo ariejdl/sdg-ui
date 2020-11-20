@@ -69,6 +69,11 @@ export function getNode(data, calculator) {
   return new Node(data, calculator);
 }
 
+function stringToLines(str) {
+  const lines = (str || "").split("\n")
+  return lines.map((v, i) => v + (i < lines.length - 1 ? "\n" : ""));
+}
+
 
 const greyBG = '#F7F7F7';
 monaco.editor.defineTheme('grey-bg', {
@@ -422,6 +427,25 @@ export class KernelNode extends ServerDependentNode {
               .then(() => {
                 this._currentHost = server.data.host;
                 this._currentKernel = kernel;
+
+                // TODO: remove
+                // testing:
+                //
+                //kernel.execCodeSimple("print('hello world')");
+                //kernel.execCodeSimple("2 * 10");
+                //kernel.execCodeSimple("a = 4");
+                /*
+                kernel.execCodeSimple(`
+from time import sleep
+for i in range(4):
+  print('hello world')
+  sleep(1)
+`);
+                */
+
+                //kernel.execCodeSimple("raise Exception()");
+                // execute_reply -> status - error
+                
                 resolve();
               })
               .catch(() => {
@@ -613,6 +637,9 @@ function renderNotebookCell(el, cell, lang, callback) {
         }
         
       } else if (obj.output_type === "stream") {
+        if (obj.name === "stderr") {
+          console.warn("implement stderr")
+        }
         if (!('text' in obj)) {
           throw "expected 'data' key in cell output";
         }
@@ -740,17 +767,57 @@ export class NotebookNode extends Node {
       throw "no kernel to run cell on";
     }
     
+    // - update UI e.g. In[*]
     // - return this._currentKernelHelper.execCodeSimple();
     // - update output, cell config
     // - watch for exceptions
     const code = (cell.cell.source || []).join("");
-    return this._currentKernelHelper.execCodeSimple(code, "-")
+    return this._currentKernelHelper.execCodeSimple(code)
       .then((res) => {
-        console.log('^^^', cell, res)
+
+        const responses = res.responses || [];
+        let newOutputs = [];
+
+        let anyErrors = false;
+        let errorObj;
+        let inExecCount = undefined;
+        
+        for (var i = 0; i < responses.length; i++) {
+          const obj = responses[i];
+          if (obj.msg_type === "error") {
+            anyErrors = true;
+          } else if (obj.msg_type === "execute_reply" &&
+              obj.content && obj.content.status === "error") {
+            anyErrors = true;
+            errorObj = obj.content;
+          } else if (obj.msg_type === "execute_input" &&
+                    obj.content) {
+            inExecCount = obj.content.execution_count;
+          }
+        }
+
+        if (anyErrors) {
+          newOutputs = [errorObj];
+        } else {
+          
+        }
+
+        cell.cell.execution_count = inExecCount;
+        cell.cell.outputs = newOutputs;
+
+        // update cell
+
+        // any errors -> replace output with error
+        // msg_type === "error"
+        // msg_type === "execute_reply"
+        //   -> content.status === "error", traceback
+
+        // msg_type === "stream" -> .content, stringToLines(...)
+        // msg_type === "execute_result"
+        
+        console.log('^^^', cell, responses)
         return;
       })
-    
-
     
   }
   
@@ -843,8 +910,7 @@ export class NotebookNode extends Node {
   updateCellSource(obj) {
     if (obj.obj && obj.obj.editor) {
       const value = obj.obj.editor.getValue();
-      const lines = (value || "").split("\n")
-      obj.cell.source = lines.map((v, i) => v + (i < lines.length - 1 ? "\n" : ""))
+      obj.cell.source = stringToLines(value || "");
     }
   }
 
@@ -1164,7 +1230,8 @@ export class PythonDFNode extends ServerDependentNode {
     if (this._rowCount && this._columns) {
       slickgridAsync(cont, this._rowCount, this._columns, (from, to) => {
         return this._currentKernelHelper.execCodeSimple(
-          `json.dumps(${this._sym}[${from}:${to}].to_dict('records'))`);
+          `json.dumps(${this._sym}[${from}:${to}].to_dict('records'))`)
+          .then(obj => obj.result)
       });
     } else {
       cont.innerHTML = "Initialising...";
@@ -1176,8 +1243,8 @@ export class PythonDFNode extends ServerDependentNode {
       this._currentKernelHelper.execCodeSimple(`len(${this._sym})`),
       this._currentKernelHelper.execCodeSimple(`list(${this._sym}.columns)`)
     ]).then((res) => {
-      const len = +res[0];
-      const cols = JSON.parse(res[1].replace(/\'/ig, '"'))
+      const len = +res[0].result;
+      const cols = JSON.parse(res[1].result.replace(/\'/ig, '"'))
       if (cols) {
         this._rowCount = len;
         this._columns = cols;
@@ -1237,7 +1304,7 @@ export class PythonDFNode extends ServerDependentNode {
     this._initInProgress = true;
 
     if (kernelHelper) {
-      return kernelHelper.execCodeSimple(code.replace(/\$sym/ig, this._sym), "execute_reply")
+      return kernelHelper.execCodeSimple(code.replace(/\$sym/ig, this._sym))
         .then((res) => {
           this._init = true;
           this._initInProgress = false;
