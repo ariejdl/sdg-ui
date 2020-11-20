@@ -620,6 +620,8 @@ https://mleibman.github.io/SlickGrid/examples/example5-collapsing.html
   padding-top: 10px;
   padding-bottom: 20px;
   position: relative;
+  font-size: 14px;
+  line-height: 21px;
 }
 
 .notebook-cell.focus {

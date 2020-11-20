@@ -392,9 +392,9 @@ export function addCytoNetwork(cy, calc, initCallback) {
 //        'value': '/static/test_data/2015-09-29-NumpyTipsAndTricks1.ipynb'
 //        'value': '/static/test_data/2015-09-30-NumpyTipsAndTricks2.ipynb'
 //        'value': '/static/test_data/2016-02-15-TestingLibFM.ipynb'
-//        'value': '/static/test_data/2016-09-10-jupyter-features.ipynb'
+        'value': '/static/test_data/2016-09-10-jupyter-features.ipynb'
 //        'value': '/static/test_data/running code.ipynb'
-        'value': '/static/test_data/01_06_Errors_and_Debugging.ipynb'
+//        'value': '/static/test_data/01_06_Errors_and_Debugging.ipynb'
 //        'value': '/static/test_data/AppendableList.ipynb'
       } },
       position: { x: 200, y: 150 } },

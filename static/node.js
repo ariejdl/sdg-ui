@@ -21,8 +21,6 @@ import { escape, ansiSpan } from "./ansi.js";
 //
 
 
-
-
 const nodeKinds = [
   "server",
   "scalar",  
@@ -628,6 +626,16 @@ function renderNotebookCell(el, cell, lang, callback) {
             haveOther = true;
             const v = obj['data']['application/javascript'].join('');
             objEl.innerHTML = `<pre><code>${v}</code></pre>`;
+          } else if (k === "application/json") {
+            haveOther = true;
+            const v = JSON.stringify(obj['data']['application/json']);
+
+            monaco.editor.colorize(value, "json")
+              .then((d) => {
+                console.log(d)
+                objEl.innerHTML = d;
+              });
+            
           } else if (k === "text/html") {
             haveOther = true;
             const v = obj['data']['text/html'].join('');
@@ -649,17 +657,16 @@ function renderNotebookCell(el, cell, lang, callback) {
         
       } else if (obj.output_type === "stream") {
         if (obj.name === "stderr") {
-          console.warn("implement stderr")
+          objEl['style']['background'] = '#f9dede';
         }
         if (!('text' in obj)) {
           throw "expected 'data' key in cell output";
         }
         objEl['style']['white-space'] = 'break-spaces';
-        objEl.innerHTML = obj['text'].join('');
+        objEl.innerHTML = ansiSpan(escape(obj['text'].join('')));
       } else if (obj.output_type === "error") {
         objEl['style']['white-space'] = 'break-spaces';
-        //objEl.innerHTML = ansiHTML(obj.traceback.join(""))
-        objEl.innerHTML = ansiSpan(escape(obj.traceback.join("")))
+        objEl.innerHTML = ansiSpan(escape(obj.traceback.join("")));
       } else {
         throw `unrecognised cell output type "${obj.output_type}"`;
       }
@@ -822,23 +829,28 @@ export class NotebookNode extends Node {
             output_type: 'error'
           }];
         } else {
-          
+          newOutputs = responses
+            .filter((res) => ["stream", "execute_result"].includes(res.msg_type))
+            .map((obj) => {
+              let out = {
+                output_type: obj.msg_type,
+                ...obj.content
+              };
+              if (typeof out['text'] === "string") {
+                out['text'] = stringToLines(out['text']);
+              }
+              if ('data' in out &&
+                  'text/plain' in out['data'] &&
+                  typeof out['data']['text/plain'] === "string") {
+                out['data']['text/plain'] = stringToLines(out['data']['text/plain']);
+              }
+              return out;
+            });
         }
 
         cell.cell.execution_count = inExecCount;
         cell.cell.outputs = newOutputs;
-
-        // update cell
-
-        // any errors -> replace output with error
-        // msg_type === "error"
-        // msg_type === "execute_reply"
-        //   -> content.status === "error", traceback
-
-        // msg_type === "stream" -> .content, stringToLines(...)
-        // msg_type === "execute_result"
         
-        console.log('^^^', cell, responses)
         return;
       })
     
@@ -1670,8 +1682,7 @@ class AutoBlurMonaco {
 
         // add these to scss
         el2['style']['padding-left'] = "10px"; // monaco editor has the same
-        //el2['style']['margin-top'] = "10px";
-        el2.style['background'] = greyBG;        
+        el2['style']['background'] = greyBG;        
         el2['style']['font-family'] = "Roboto Mono";
         el2['style']['font-size'] = `${this._fontSize}px`;
         el2['style']['line-height'] = `${this._fontSize * 1.5}px`;

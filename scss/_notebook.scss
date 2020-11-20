@@ -25,6 +25,8 @@
     padding-top: 10px;
     padding-bottom: 20px;
     position: relative;
+    font-size: 14px;
+    line-height: 21px; // 14 * 1.5;
 }
 
 .notebook-cell.focus {
