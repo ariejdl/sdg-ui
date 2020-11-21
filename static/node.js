@@ -396,25 +396,6 @@ export class KernelNode extends ServerDependentNode {
               .then(() => {
                 this._currentHost = server.data.host;
                 this._currentKernel = kernel;
-
-                // TODO: remove
-                // testing:
-                //
-                //kernel.execCodeSimple("print('hello world')");
-                //kernel.execCodeSimple("2 * 10");
-                //kernel.execCodeSimple("a = 4");
-                /*
-                kernel.execCodeSimple(`
-from time import sleep
-for i in range(4):
-  print('hello world')
-  sleep(1)
-`);
-                */
-
-                //kernel.execCodeSimple("raise Exception()");
-                // execute_reply -> status - error
-                
                 resolve();
               })
               .catch(() => {
@@ -571,6 +552,9 @@ export class NotebookNode extends Node {
 
     const cell = this._cells[nextIdx];
     return runCell(cell, this._currentKernelHelper).then(() => {
+      if (cell.obj) {
+        this.focusCell(cell.obj.el);
+      }
       this._runCellContinuous(evalId);
     });
   }
@@ -690,7 +674,6 @@ export class NotebookNode extends Node {
         this.focusCell(el);
       } else if (event === "run cell") {
         // TODO:
-      } else if (event === "new above") {
       } else if (event === "new below") {
         const idx = getChildNumber(el);
         this.addCell(idx + 1);
@@ -811,7 +794,7 @@ export class NotebookNode extends Node {
       cell.obj.el.parentNode.replaceChild(newCell.el, cell.obj.el);
       cell.obj = newCell;
       this.focusCell(newCell.el);      
-    });    
+    });
 
     this._notebookLanguage = notebookLanguage;
     this._currentCont = cont;

@@ -150,18 +150,52 @@ export function stringToLines(str) {
   return lines.map((v, i) => v + (i < lines.length - 1 ? "\n" : ""));
 }
 
+function _convertResponse(obj) {
+  let out = {
+    output_type: obj.msg_type,
+    ...obj.content
+  };
+  if (typeof out['text'] === "string") {
+    out['text'] = stringToLines(out['text']);
+  }
+  if ('data' in out &&
+      'text/plain' in out['data'] &&
+      typeof out['data']['text/plain'] === "string") {
+    out['data']['text/plain'] = stringToLines(out['data']['text/plain']);
+  }
+  return out;
+}
+
+class IncrementalCellRenderer {
+
+  constructor(cell) {
+    this._cell = cell;
+    this._anyErrors = false;
+    this._responses = [];
+    this.init();
+  }
+
+  init() {
+    this._cell.cell.outputs = [];
+  }
+
+  callback(res) {
+    this._responses.push(res);
+  }
+
+}
+
 export function runCell(cell, kernelHelper) {
 
   if (!kernelHelper) {
     throw "no kernel to run cell on";
   }
   
-  // - update UI e.g. In[*]
-  // - return this._currentKernelHelper.execCodeSimple();
-  // - update output, cell config
-  // - watch for exceptions
   const code = (cell.cell.source || []).join("");
-  return kernelHelper.execCodeSimple(code)
+
+  const incRender = new IncrementalCellRenderer(cell);
+  
+  return kernelHelper.execCodeSimple(code, incRender.callback.bind(incRender))
     .then((res) => {
 
       const responses = res.responses || [];
@@ -195,21 +229,7 @@ export function runCell(cell, kernelHelper) {
       } else {
         newOutputs = responses
           .filter((res) => ["stream", "execute_result"].includes(res.msg_type))
-          .map((obj) => {
-            let out = {
-              output_type: obj.msg_type,
-              ...obj.content
-            };
-            if (typeof out['text'] === "string") {
-              out['text'] = stringToLines(out['text']);
-            }
-            if ('data' in out &&
-                'text/plain' in out['data'] &&
-                typeof out['data']['text/plain'] === "string") {
-              out['data']['text/plain'] = stringToLines(out['data']['text/plain']);
-            }
-            return out;
-          });
+          .map(_convertResponse);
       }
 
       cell.cell.execution_count = inExecCount;
@@ -219,12 +239,105 @@ export function runCell(cell, kernelHelper) {
     });
 }
 
+export function renderCellOutput(obj, _outBody, _outCount) {
+
+  let objEl = dom.ce("div");
+  
+  if (obj.execution_count) {
+    _outCount.innerHTML = `<div class="grey-text">Out&nbsp;[${obj.execution_count || '&nbsp;'}]</div>`;
+  }
+
+  if (obj.output_type === "execute_result" || obj.output_type === "display_data") {
+    if (!('data' in obj)) {
+      throw "expected 'data' key in cell output";
+    }
+    let text;
+    let haveOther = false;
+
+    for (const k in obj['data']) {
+      if (k === "text/plain") {
+        text = obj['data']['text/plain'].join('');
+      } else if (k === "application/javascript") {
+        haveOther = true;
+        const v = obj['data']['application/javascript'].join('');
+        objEl.innerHTML = `<pre><code>${v}</code></pre>`;
+      } else if (k === "application/json") {
+        haveOther = true;
+        const v = JSON.stringify(obj['data']['application/json'], null, 2);
+        monaco.editor.colorize(v, "json")
+          .then((d) => {
+            objEl['style']['white-space'] = 'break-spaces';
+            objEl.innerHTML = d;
+          });
+        
+      } else if (k === "text/html") {
+        haveOther = true;
+        const v = obj['data']['text/html'].join('');
+        objEl.innerHTML = v;
+      } else if (!!k.match('^image\/')) {
+        haveOther = true;
+        const img = dom.ce("img")
+        img.alt = text;
+        img.src = `data:${k};base64,${obj['data'][k]}`;
+        dom.ap(objEl, img);
+      } else {
+        throw `unexpected data found in cell output ${k}`;
+      }
+    }
+
+    if (!haveOther) {
+      objEl.innerHTML = text;
+    }
+    
+  } else if (obj.output_type === "stream") {
+    if (obj.name === "stderr") {
+      objEl['style']['background'] = '#f9dede';
+    }
+    if (!('text' in obj)) {
+      throw "expected 'data' key in cell output";
+    }
+    objEl['style']['white-space'] = 'break-spaces';
+    objEl.innerHTML = ansiSpan(escape(obj['text'].join('')));
+  } else if (obj.output_type === "error") {
+    objEl['style']['white-space'] = 'break-spaces';
+    objEl.innerHTML = ansiSpan(escape(obj.traceback.join("")));
+  } else {
+    throw `unrecognised cell output type "${obj.output_type}"`;
+  }
+  dom.ap(_outBody, objEl);
+  
+}
+
 // TODO: make this able to be incrementally updated
+/*
+
+not all these covered at this time
+
+- https://jupyter-client.readthedocs.io/en/stable/messaging.html
+- ‘stream’
+- ‘display_data’
+- ‘update_display_data’
+- ‘execute_request’
+- ‘execute_input’ - execution_count/in/out, message pairs
+- ‘execute_reply’ - execution_count/in/out
+- ‘execute_result’
+- ‘error’
+- ‘status’
+- ‘clear_output’
+- ‘debug_event’
+- ‘input_request’
+- ‘input_reply’
+- ‘comm_msg’
+- ‘comm_close’
+- … kernel_info_request kernel_info_reply
+
+ */
 export function renderNotebookCell(el, cell, lang, callback) {
+  // TODO: conver the below to multi-line string
   el.innerHTML = "";
 
   const execCount = cell.execution_count;
-  
+
   const cont = dom.ce("div");
   const _in = dom.ce("div");
   const _inCount = dom.ce("div");
@@ -265,6 +378,8 @@ export function renderNotebookCell(el, cell, lang, callback) {
   });
   [_inBody, _outBody].map((el) => {
     el.style['width'] = `calc(100% - ${execCountWidth}px)`;
+    el.style['max-height'] = '300px';
+    el.style['overflow-y'] = 'scroll';
   });
 
   _inCount.innerHTML = `
@@ -321,78 +436,10 @@ export function renderNotebookCell(el, cell, lang, callback) {
     dom.ap(_outCountWrap, _outCount);
     dom.ap(_out, _outBody);
 
-    let outExecCount;
-
     cell.outputs.forEach((obj) => {
-
-      let objEl = dom.ce("div");
-      
-      if (obj.execution_count && outExecCount === undefined) {
-        outExecCount = obj.execution_count;
-      }
-
-      if (obj.output_type === "execute_result" || obj.output_type === "display_data") {
-        if (!('data' in obj)) {
-          throw "expected 'data' key in cell output";
-        }
-        let text;
-        let haveOther = false;
-
-        for (const k in obj['data']) {
-          if (k === "text/plain") {
-            text = obj['data']['text/plain'].join('');
-          } else if (k === "application/javascript") {
-            haveOther = true;
-            const v = obj['data']['application/javascript'].join('');
-            objEl.innerHTML = `<pre><code>${v}</code></pre>`;
-          } else if (k === "application/json") {
-            haveOther = true;
-            const v = JSON.stringify(obj['data']['application/json']);
-
-            monaco.editor.colorize(value, "json")
-              .then((d) => {
-                objEl.innerHTML = d;
-              });
-            
-          } else if (k === "text/html") {
-            haveOther = true;
-            const v = obj['data']['text/html'].join('');
-            objEl.innerHTML = v;
-          } else if (!!k.match('^image\/')) {
-            haveOther = true;
-            const img = dom.ce("img")
-            img.alt = text;
-            img.src = `data:${k};base64,${obj['data'][k]}`;
-            dom.ap(objEl, img);
-          } else {
-            throw `unexpected data found in cell output ${k}`;
-          }
-        }
-
-        if (!haveOther) {
-          objEl.innerHTML = text;
-        }
-        
-      } else if (obj.output_type === "stream") {
-        if (obj.name === "stderr") {
-          objEl['style']['background'] = '#f9dede';
-        }
-        if (!('text' in obj)) {
-          throw "expected 'data' key in cell output";
-        }
-        objEl['style']['white-space'] = 'break-spaces';
-        objEl.innerHTML = ansiSpan(escape(obj['text'].join('')));
-      } else if (obj.output_type === "error") {
-        objEl['style']['white-space'] = 'break-spaces';
-        objEl.innerHTML = ansiSpan(escape(obj.traceback.join("")));
-      } else {
-        throw `unrecognised cell output type "${obj.output_type}"`;
-      }
-      dom.ap(_outBody, objEl);
-      
+      renderCellOutput(obj, _outBody, _outCount);
     });
 
-    _outCount.innerHTML = `<div class="grey-text">Out&nbsp;[${outExecCount || '&nbsp;'}]</div>`;
   }
 
   

@@ -76,7 +76,10 @@ export class KernelHelper {
     // TODO:
   }
 
-  execCodeSimple(code, return_msg) {
+  execCodeSimple(code, incrementalCallback) {
+
+    const filt = (msg) => msg.msg_type !== "status";
+    
     return new Promise((resolve, reject) => {
       //  execute_reply is the end, execute_result may have data, as may stream, need it all however
       return this.requestReply(
@@ -89,6 +92,11 @@ export class KernelHelper {
           "user_expressions": {},
           "allow_stdin": true,
           "stop_on_error": true
+        },
+        (msg) => {
+          if (!!incrementalCallback && filt(msg)) {
+            incrementalCallback(msg)
+          }
         }
       ).then((responses) => {
 
@@ -98,7 +106,7 @@ export class KernelHelper {
         
         resolve({
           result: results.length === 1 ? results[0] : undefined,
-          responses: responses.filter((msg, i) => msg.msg_type !== "status")
+          responses: responses.filter(filt)
         });
         
       });
@@ -106,7 +114,7 @@ export class KernelHelper {
     });
   }
 
-  requestReply(msg_type, return_msg_type, content) {
+  requestReply(msg_type, return_msg_type, content, incrementalCallback) {
 
     return new Promise((resolve, reject) => {
 
@@ -114,6 +122,9 @@ export class KernelHelper {
       let responses = [];
       this._outstandingRequests[msgId] = (content) => {
         responses.push(content);
+        if (!!incrementalCallback) {
+          incrementalCallback(content)
+        }
         if (content.msg_type === return_msg_type) {
           delete this._outstandingRequests[msgId];
           resolve(responses);
