@@ -22,6 +22,28 @@ export class NotebookCell {
     this._notebookLanguage = lang;
   }
 
+  updateCellCount() {
+    const _inCount = this._el.querySelector(".in-count");
+    updateInCount(this._cell.execution_count, _inCount);
+  }
+
+  clearCellOutput() {
+    const _outBody = this._el.querySelector(".out-body");
+    if (!_outBody) {
+      throw "couldn't find element";
+    }
+    _outBody.innerHTML = "";
+  }
+
+  appendCellOutput(obj) {
+    const _outBody = this._el.querySelector(".out-body");
+    const _outCount = this._el.querySelector(".out-count");
+    if (!_outBody || !_outCount) {
+      throw "couldn't find element";
+    }
+    renderCellOutput(obj, _outBody, _outCount);
+  }
+
   render() {
     this._editor = renderNotebookCell(this._el, this._cell, this._notebookLanguage, (event) => {
       if (event === "focus") {
@@ -37,6 +59,11 @@ export class NotebookCell {
       }
     });
 
+  }
+
+  updateCellSource() {
+    const code = this.getCode() || [];
+    this._cell.source = code;
   }
 
   getEl() {
@@ -243,10 +270,58 @@ class IncrementalCellRenderer {
     const c = this._cell.getCell();
     c.outputs = [];
     this._cell.setCell(c);
+    this._cell.clearCellOutput();
   }
 
-  callback(res) {
-    this._responses.push(res);
+  callback(obj) {
+
+    if (this._anyErrors) {
+      return;
+    }
+    
+    let anyError = false;
+    let errorObj;
+    let inExecCount;
+
+    if (obj.msg_type === "error") {
+      anyError = true;
+    } else if (obj.msg_type === "execute_reply" &&
+               obj.content && obj.content.status === "error") {
+      anyError = true;
+      errorObj = obj.content;
+    } else if (obj.msg_type === "execute_input" &&
+               obj.content) {
+      inExecCount = obj.content.execution_count;
+    }
+
+    if (anyError) {
+      this._anyErrors = true;;
+      const cellOutput = {
+        traceback: errorObj['traceback'],
+        evalue: errorObj['evalue'],
+        ename: errorObj['ename'],
+        output_type: 'error'
+      };
+      this._cell.clearCellOutput()
+      this._cell.outputs = [cellOutput];
+      this._cell.appendCellOutput(cellOutput);
+    } else {
+      if (["stream", "execute_result"].includes(obj.msg_type)) {
+        let newObj = _convertResponse(obj);
+        const c = this._cell.getCell();
+        c.outputs.push(newObj);
+        this._cell.setCell(c);
+        this._cell.appendCellOutput(newObj);
+      }
+    }
+
+    if (inExecCount) {
+      const c = this._cell.getCell();
+      c.execution_count = inExecCount;
+      this._cell.setCell(c);      
+      this._cell.updateCellCount()
+    }
+    
   }
 
 }
@@ -258,65 +333,18 @@ export function runCell(cell, kernelHelper) {
   }
 
   // save source first
+  cell.updateCellSource();
   const code = cell.getCode() || [];
-  const c = cell.getCell();
-  c.source = code
-  cell.setCell(c);
-
+  
   const incRender = new IncrementalCellRenderer(cell);
   
   return kernelHelper.execCodeSimple(code.join(""), incRender.callback.bind(incRender))
-    .then((res) => {
-
-      const responses = res.responses || [];
-      let newOutputs = [];
-
-      let anyErrors = false;
-      let errorObj;
-      let inExecCount = undefined;
-      
-      for (var i = 0; i < responses.length; i++) {
-        const obj = responses[i];
-        if (obj.msg_type === "error") {
-          anyErrors = true;
-        } else if (obj.msg_type === "execute_reply" &&
-                   obj.content && obj.content.status === "error") {
-          anyErrors = true;
-          errorObj = obj.content;
-        } else if (obj.msg_type === "execute_input" &&
-                   obj.content) {
-          inExecCount = obj.content.execution_count;
-        }
-      }
-
-      if (anyErrors) {
-        newOutputs = [{
-          traceback: errorObj['traceback'],
-          evalue: errorObj['evalue'],
-          ename: errorObj['ename'],
-          output_type: 'error'
-        }];
-      } else {
-        newOutputs = responses
-          .filter((res) => ["stream", "execute_result"].includes(res.msg_type))
-          .map(_convertResponse);
-      }
-
-      const c = cell.getCell();
-      c.execution_count = inExecCount;
-      c.outputs = newOutputs;
-      cell.setCell(c);
-
-      cell.render();
-      
-      return;
-    });
 }
 
 export function renderCellOutput(obj, _outBody, _outCount) {
 
   let objEl = dom.ce("div");
-  
+
   if (obj.execution_count) {
     _outCount.innerHTML = `<div class="grey-text">Out&nbsp;[${obj.execution_count || '&nbsp;'}]</div>`;
   }
@@ -380,6 +408,10 @@ export function renderCellOutput(obj, _outBody, _outCount) {
   }
   dom.ap(_outBody, objEl);
   
+}
+
+function updateInCount(execCount, _inCount) {
+  _inCount.querySelector(".grey-text").innerHTML = `In&nbsp;[${execCount || '&nbsp;'}]`;
 }
 
 // TODO: make this able to be incrementally updated
@@ -462,8 +494,10 @@ export function renderNotebookCell(el, cell, lang, callback) {
      <img src="/static/images/bootstrap-icons/play-fill.svg">
    </div>
 </div>
-<div class="grey-text">In&nbsp;[${execCount || '&nbsp;'}]</div>
+<div class="grey-text"></div>
 `;
+
+  updateInCount(execCount, _inCount);
 
   dom.ap(el, cont);
   
@@ -471,6 +505,8 @@ export function renderNotebookCell(el, cell, lang, callback) {
   dom.ap(_in, _inCountWrap);
   dom.ap(_inCountWrap, _inCount);
   dom.ap(_in, _inBody);
+
+  _inCount.classList.add("in-count");
 
   _butBelow.classList.add("insert-btn")
   _butBelow.classList.add("cell-action")
@@ -509,6 +545,9 @@ export function renderNotebookCell(el, cell, lang, callback) {
     dom.ap(_out, _outCountWrap);
     dom.ap(_outCountWrap, _outCount);
     dom.ap(_out, _outBody);
+
+    _outBody.classList.add("out-body");
+    _outCount.classList.add("out-count");
 
     cell.outputs.forEach((obj) => {
       renderCellOutput(obj, _outBody, _outCount);

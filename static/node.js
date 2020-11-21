@@ -663,11 +663,8 @@ export class NotebookNode extends Node {
     this.saveCells();
   }
 
-  updateCellSource(obj) {
-    if (obj.obj && obj.obj.editor) {
-      const value = obj.obj.editor.getValue();
-      obj.cell.source = stringToLines(value || "");
-    }
+  updateCellSource(cell) {
+    cell.updateCellSource();
   }
 
   saveCells() {
@@ -788,9 +785,11 @@ export class NotebookNode extends Node {
       }
 
       const value = e.target.value || "code";
-      const cell = this._currentFocus
+      const cell = this._currentFocus;
       this.updateCellSource(cell);
-      cell.cell["cell_type"] = value;
+      const c = cell.getCell();
+      c["cell_type"] = value;
+      cell.setCell(c);
       cell.render();
     });
 
