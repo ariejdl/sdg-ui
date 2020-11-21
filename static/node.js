@@ -2,7 +2,13 @@
 import { throttle, capitalize, dom } from "./utils.js";
 import { KernelHelper } from "./kernel.js";
 import { slickgridAsync, treeFilter, SlickgridTree } from "./slickgrid.js";
-import { AutoBlurMonaco, stringToLines, runCell, renderNotebookCell } from "./notebook.js";
+import {
+  NotebookCell,
+  AutoBlurMonaco,
+  stringToLines,
+  runCell,
+  renderNotebookCell
+} from "./notebook.js";
 
 const nodeKinds = [
   "server",
@@ -65,6 +71,7 @@ export class Node {
   }
 
   init(n) {
+    this._node = n;
   }
 
   getExtraConf() {
@@ -195,10 +202,7 @@ export class Node {
 </div>
 `;
 
-         dom.on(row.querySelector(".run-node"), 'click', () => {
-           const data = node.data();
-           this._calculator.evalNode('#' + data['id']);
-         });
+         dom.on(row.querySelector(".run-node"), 'click', this.runSelf.bind(this));
 
          dom.on(row.querySelector(".refresh-node"), 'click', refreshNode)
          
@@ -209,6 +213,10 @@ export class Node {
 
     });
     el.appendChild(conf);    
+  }
+
+  runSelf() {
+    this._calculator.evalNode('#' + this._data['id'], false, true);
   }
 
   getPreviousValues(incomers) {
@@ -449,12 +457,6 @@ export class ServerFileNode extends Node {
   
 }
 
-
-
-function getChildNumber(node) {
-  return Array.prototype.indexOf.call(node.parentNode.childNodes, node);
-}
-
 export class NotebookNode extends Node {
 
   constructor(data, calculator) {
@@ -498,6 +500,13 @@ export class NotebookNode extends Node {
       return;
     }
 
+    this.updateKernel()
+
+    this.runAllCells(evalId);
+  }
+
+  updateKernel() {
+    const incomers = this._node.incomers().filter(o => o.isNode());
     this._currentKernelHelper = undefined;
 
     const kernels = incomers
@@ -509,9 +518,7 @@ export class NotebookNode extends Node {
 
     const kernelNode = kernels[0].scratch('node');
     const kernelHelper = kernelNode.node._currentKernel;
-    this._currentKernelHelper = kernelHelper;
-
-    this.runAllCells(evalId)
+    this._currentKernelHelper = kernelHelper;    
   }
 
   stopRun() {
@@ -520,8 +527,8 @@ export class NotebookNode extends Node {
 
   _getNextCodeCell(minIdx) {
     for (var i = minIdx; i < this._cells.length; i++) {
-      const cell = this._cells[i];
-      if (cell && cell.cell && cell.cell.cell_type === "code") {
+      const cell = this._cells[i].getCell();
+      if (cell && cell.cell_type === "code") {
         return i;
       }
     }
@@ -537,12 +544,17 @@ export class NotebookNode extends Node {
     return this._runCellContinuous(evalId);
   }
 
+  runCell(cell) {
+    this.updateKernel();
+    runCell(cell, this._currentKernelHelper);
+  }  
+
   _runCellContinuous(evalId) {
     // stop
     if (!this._running || this._calculator.guardCheck(evalId)) {
       return;
     }
-    
+
     const nextIdx = this._getNextCodeCell(this._cellRunIdx);
     // no more cells
     if (nextIdx === undefined) {
@@ -551,17 +563,16 @@ export class NotebookNode extends Node {
     this._cellRunIdx++;
 
     const cell = this._cells[nextIdx];
+    this.focusCell(cell);
+
     return runCell(cell, this._currentKernelHelper).then(() => {
-      if (cell.obj) {
-        this.focusCell(cell.obj.el);
-      }
       this._runCellContinuous(evalId);
     });
   }
   
   serializeNotebook() {
     return {
-      cells: (this._cells || []).map(o => o.cell),
+      cells: (this._cells || []).map(o => o.getCell()),
       metadata: this._metadata || {},
       nbformat: this._nbformat || 4,
       nbformat_minor: this._nbformat_minor || 0,
@@ -569,17 +580,25 @@ export class NotebookNode extends Node {
   }
 
   deserializeNotebook(conf) {
-    this._cells = (conf.cells || []).map(c => ({ cell: c }));
+    this._cells = (conf.cells || []).map(c => new NotebookCell(c, this))
     this._metadata = conf.metadata;
     this._nbformat = conf.nbformat;
     this._nbformat_minor = conf.nbformat_minor;
   }
 
+  getChildNumber(cell) {
+    for (var i = 0; i < this._cells.length; i++) {
+      if (this._cells[i] === cell) {
+        return i;
+      }
+    }
+  }
+
   removeFocusCell() {
     if (this._currentFocus) {
-      const idx = getChildNumber(this._currentFocus);
-      if (this._currentFocus.nextSibling) {
-        this.focusCell(this._currentFocus.nextSibling);
+      const idx = this.getChildNumber(this._currentFocus);
+      if (idx + 1 < this._cells.length) {
+        this.focusCell(this._cells[idx + 1]);
       } else {
         this._currentFocus = undefined;
       }
@@ -588,20 +607,18 @@ export class NotebookNode extends Node {
   }
 
   addCell(index) {
-    const cell = { cell_type: "code" };
-    const obj = this.renderCell(cell);
-    const cellObj = {
-      obj: obj,
-      cell: cell
-    };
-    this._cells.splice(index, 0, cellObj);
-    const prev = this._currentCont.querySelector(`.notebook-cell:nth-child(${index + 1})`);
+    const cell = new NotebookCell({ cell_type: "code" }, this);
+    cell.setLanguage(this._notebookLanguage);    
+    this._cells.splice(index, 0, cell);
+    const el = cell.getEl();
+    const prev = this._currentCont.querySelector(`.notebook-cell:nth-of-type(${index + 1})`);
     if (prev) {
-      prev.parentNode.insertBefore(obj.el, prev);
+      prev.parentNode.insertBefore(el, prev);
     } else {
-      dom.ap(this._currentCont, obj.el);
+      dom.ap(this._currentCont, el);
     }
-    this.focusCell(obj.el);
+    cell.render();
+    this.focusCell(cell);    
   }
 
   validateIndex(index) {
@@ -616,7 +633,7 @@ export class NotebookNode extends Node {
     this._cells.splice(index, 1);
 
     if (this._renderOpen) {
-      const el = this._currentCont.querySelector(`.notebook-cell:nth-child(${index + 1})`);
+      const el = this._currentCont.querySelector(`.notebook-cell:nth-of-type(${index + 1})`);
       if (!el) {
         throw "element not found";
       }
@@ -624,23 +641,24 @@ export class NotebookNode extends Node {
     }
   }
 
-  focusCell(el) {
-    const idx = getChildNumber(el);
-    this.validateIndex(idx);
+  focusCell(cell) {
 
-    // update cell type
-    const selCellType = this._menu.querySelector(".cell-type");
-    selCellType.value = (this._cells[idx].cell.cell_type || "code");
+    if (this._menu) {
+      // update cell type
+      const selCellType = this._menu.querySelector(".cell-type");
+      selCellType.value = (cell.getCell().cell_type || "code");
+    }
     
     if (this._currentFocus) {
-      this._currentFocus.classList.remove("focus");
+      this._currentFocus.blur();
     }
-    el.classList.add("focus");
-    this._currentFocus = el;
+    cell.focus()
+    this._currentFocus = cell;
   }
 
   clearRender() {
     super.clearRender();
+    this._menu = undefined;
     this._currentFocus = undefined;
     this.saveCells();
   }
@@ -656,36 +674,6 @@ export class NotebookNode extends Node {
     this._cells.map((obj) => {
       this.updateCellSource(obj);
     })
-  }
-
-  renderCell(cell) {
-    if (!this._renderOpen) {
-      return;
-    }
-
-    const el = dom.ce("div");
-
-    const editor = renderNotebookCell(el, cell, this._notebookLanguage, (event) => {
-      const idx = getChildNumber(el);
-      this.validateIndex(idx);
-      const cell = this._cells[idx];
-      
-      if (event === "focus") {
-        this.focusCell(el);
-      } else if (event === "run cell") {
-        // TODO:
-      } else if (event === "new below") {
-        const idx = getChildNumber(el);
-        this.addCell(idx + 1);
-      } else {
-        throw "unrecognised event";
-      }
-    });
-
-    return {
-      el: el,
-      editor: editor
-    };
   }
 
   render(n, el, data, last_value) {
@@ -739,10 +727,10 @@ export class NotebookNode extends Node {
    <div class="run-cell cell-action">
      <span>Run&nbsp;</span><img src="/static/images/bootstrap-icons/play-fill.svg">
    </div>
-   <div class="cell-action" title="run all">
+   <div class="run-all cell-action" title="run all">
      <img src="/static/images/bootstrap-icons/skip-forward-fill.svg">
    </div>
-   <div class="cell-action">
+   <div class="stop-exec cell-action">
      <img src="/static/images/bootstrap-icons/stop-fill.svg">
    </div>
    <div class="cell-action">
@@ -766,9 +754,24 @@ export class NotebookNode extends Node {
    </div>
 `;
 
+    dom.on(menu.querySelector(".run-cell"), "click", () => {
+      if (this._currentFocus) {
+        this.runCell(this._currentFocus);
+      }
+    });
+
+    dom.on(menu.querySelector(".run-all"), "click", () => {
+      this.runSelf();
+    });
+
+    dom.on(menu.querySelector(".stop-exec"), "click", () => {
+      this._running = false;
+      // TODO: also interrupt kernel
+    });
+
     dom.on(menu.querySelector(".add-cell"), "click", () => {
       if (this._currentFocus) {
-        const idx = getChildNumber(this._currentFocus);
+        const idx = this.getChildNumber(this._currentFocus);
         this.addCell(idx + 1);
       } else {
         this.addCell(this._cells.length);
@@ -785,15 +788,10 @@ export class NotebookNode extends Node {
       }
 
       const value = e.target.value || "code";
-      const idx = getChildNumber(this._currentFocus);
-      this.validateIndex(idx);
-      const cell = this._cells[idx];
+      const cell = this._currentFocus
       this.updateCellSource(cell);
       cell.cell["cell_type"] = value;
-      const newCell = this.renderCell(cell.cell);
-      cell.obj.el.parentNode.replaceChild(newCell.el, cell.obj.el);
-      cell.obj = newCell;
-      this.focusCell(newCell.el);      
+      cell.render();
     });
 
     this._notebookLanguage = notebookLanguage;
@@ -803,9 +801,9 @@ export class NotebookNode extends Node {
       // async draw, probably improves performance slightly
       setTimeout(() => {
         this._cells.forEach((cell) => {
-          const obj = this.renderCell(cell.cell);
-          cell.obj = obj;
-          dom.ap(this._currentCont, obj.el);
+          cell.setLanguage(this._notebookLanguage);
+          cell.render();
+          dom.ap(this._currentCont, cell.getEl());
         });
       }, 0);
     }

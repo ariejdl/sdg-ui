@@ -2,6 +2,70 @@
 import { dom } from "./utils.js";
 import { escape, ansiSpan } from "./ansi.js";
 
+export class NotebookCell {
+
+  constructor(cell, parent) {
+    this._el = dom.ce("div");
+    this._cell = cell;
+    this._parent = parent;
+  }
+
+  getCell() {
+    return this._cell;
+  }
+
+  setCell(cell) {
+    return this._cell = cell;
+  }
+
+  setLanguage(lang) {
+    this._notebookLanguage = lang;
+  }
+
+  render() {
+    this._editor = renderNotebookCell(this._el, this._cell, this._notebookLanguage, (event) => {
+      if (event === "focus") {
+        this._parent.focusCell(this);
+      } else if (event === "run cell") {
+        this._parent.runCell(this);
+      } else if (event === "new below") {
+        const idx = this._parent.getChildNumber(this);
+        this._parent.validateIndex(idx);        
+        this._parent.addCell(idx + 1);
+      } else {
+        throw "unrecognised event";
+      }
+    });
+
+  }
+
+  getEl() {
+    return this._el;
+  }
+
+  focus() {
+    this._el.classList.add("focus");
+  }
+
+  blur() {
+    this._el.classList.remove("focus");
+  }
+
+  dispose() {
+    this._cell = undefined;
+    // el.parentNode.removeChild(el)
+  }
+
+  getCode() {
+    if (this._editor) {
+      return stringToLines(this._editor.getValue() || "");
+    } else {
+      return this._cell.source
+    }
+  }
+  
+}
+
 const greyBG = '#F7F7F7';
 monaco.editor.defineTheme('grey-bg', {
   base: 'vs',
@@ -176,7 +240,9 @@ class IncrementalCellRenderer {
   }
 
   init() {
-    this._cell.cell.outputs = [];
+    const c = this._cell.getCell();
+    c.outputs = [];
+    this._cell.setCell(c);
   }
 
   callback(res) {
@@ -190,12 +256,16 @@ export function runCell(cell, kernelHelper) {
   if (!kernelHelper) {
     throw "no kernel to run cell on";
   }
-  
-  const code = (cell.cell.source || []).join("");
+
+  // save source first
+  const code = cell.getCode() || [];
+  const c = cell.getCell();
+  c.source = code
+  cell.setCell(c);
 
   const incRender = new IncrementalCellRenderer(cell);
   
-  return kernelHelper.execCodeSimple(code, incRender.callback.bind(incRender))
+  return kernelHelper.execCodeSimple(code.join(""), incRender.callback.bind(incRender))
     .then((res) => {
 
       const responses = res.responses || [];
@@ -232,8 +302,12 @@ export function runCell(cell, kernelHelper) {
           .map(_convertResponse);
       }
 
-      cell.cell.execution_count = inExecCount;
-      cell.cell.outputs = newOutputs;
+      const c = cell.getCell();
+      c.execution_count = inExecCount;
+      c.outputs = newOutputs;
+      cell.setCell(c);
+
+      cell.render();
       
       return;
     });
@@ -441,7 +515,6 @@ export function renderNotebookCell(el, cell, lang, callback) {
     });
 
   }
-
   
   return editor
 }

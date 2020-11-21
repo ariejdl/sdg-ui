@@ -49,7 +49,7 @@ export class Calculator {
     }
     
     // throw exception if not found
-    const n = this._cy.$(id)
+    const n = this._cy.$(id);
     if (n.length !== 1) {
       throw `${id} not found`;
     }

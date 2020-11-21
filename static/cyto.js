@@ -301,7 +301,7 @@ export function setupCyto() {
     
     // clear holder
     var el = (evt.target.scratch('state') || {}).el;
-    if (el) {
+    if (el && el.parentNode) {
       el.parentNode.removeChild(el);
     }
     evt.target.unbind('position');
