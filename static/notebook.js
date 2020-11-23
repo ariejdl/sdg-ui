@@ -24,14 +24,19 @@ export class NotebookCell {
 
   updateCellCount() {
     const _inCount = this._el.querySelector(".in-count");
+    if (!_inCount) {
+      return;
+    }
     updateInCount(this._cell.execution_count, _inCount);
   }
 
   clearCellOutput() {
     const _outBody = this._el.querySelector(".out-body");
-    if (!_outBody) {
-      throw "couldn't find element";
+    const _outCount = this._el.querySelector(".out-count");
+    if (!_outBody || !_outCount) {
+      return;
     }
+    _outCount.innerHTML = "";
     _outBody.innerHTML = "";
   }
 
@@ -39,7 +44,7 @@ export class NotebookCell {
     const _outBody = this._el.querySelector(".out-body");
     const _outCount = this._el.querySelector(".out-count");
     if (!_outBody || !_outCount) {
-      throw "couldn't find element";
+      return;
     }
     renderCellOutput(obj, _outBody, _outCount);
   }
@@ -249,10 +254,13 @@ function _convertResponse(obj) {
   if (typeof out['text'] === "string") {
     out['text'] = stringToLines(out['text']);
   }
-  if ('data' in out &&
-      'text/plain' in out['data'] &&
-      typeof out['data']['text/plain'] === "string") {
-    out['data']['text/plain'] = stringToLines(out['data']['text/plain']);
+  if ('data' in out) {
+    ['text/plain', 'application/javascript', 'text/html'].forEach(k => {
+      if (k in out['data'] &&
+          typeof out['data'][k] === "string") {
+        out['data'][k] = stringToLines(out['data'][k]);
+      }
+    });
   }
   return out;
 }
@@ -269,33 +277,36 @@ class IncrementalCellRenderer {
   init() {
     const c = this._cell.getCell();
     c.outputs = [];
+    c.execution_count = '*';
     this._cell.setCell(c);
     this._cell.clearCellOutput();
+    this._cell.updateCellCount();
   }
 
   callback(obj) {
-
-    if (this._anyErrors) {
-      return;
-    }
-    
     let anyError = false;
     let errorObj;
-    let inExecCount;
+    let execCount;
 
     if (obj.msg_type === "error") {
       anyError = true;
-    } else if (obj.msg_type === "execute_reply" &&
-               obj.content && obj.content.status === "error") {
+    }
+
+    if (obj.msg_type === "execute_reply" && obj.content) {
+      execCount = obj.content.execution_count;
+    }
+
+    if (obj.msg_type === "execute_reply" &&
+        obj.content && obj.content.status === "error") {
       anyError = true;
       errorObj = obj.content;
-    } else if (obj.msg_type === "execute_input" &&
-               obj.content) {
-      inExecCount = obj.content.execution_count;
     }
 
     if (anyError) {
-      this._anyErrors = true;;
+      this._anyErrors = true;
+    }
+
+    if (errorObj) {
       const cellOutput = {
         traceback: errorObj['traceback'],
         evalue: errorObj['evalue'],
@@ -305,8 +316,21 @@ class IncrementalCellRenderer {
       this._cell.clearCellOutput()
       this._cell.outputs = [cellOutput];
       this._cell.appendCellOutput(cellOutput);
-    } else {
-      if (["stream", "execute_result"].includes(obj.msg_type)) {
+    }
+
+    if (execCount) {
+      const c = this._cell.getCell();
+      c.execution_count = execCount;
+      this._cell.setCell(c);      
+      this._cell.updateCellCount();
+    }    
+
+    if (this._anyErrors) {
+      return;
+    }
+
+    if (!anyError) {
+      if (["stream", "execute_result", "display_data"].includes(obj.msg_type)) {
         let newObj = _convertResponse(obj);
         const c = this._cell.getCell();
         c.outputs.push(newObj);
@@ -315,13 +339,7 @@ class IncrementalCellRenderer {
       }
     }
 
-    if (inExecCount) {
-      const c = this._cell.getCell();
-      c.execution_count = inExecCount;
-      this._cell.setCell(c);      
-      this._cell.updateCellCount()
-    }
-    
+   
   }
 
 }
@@ -362,7 +380,14 @@ export function renderCellOutput(obj, _outBody, _outCount) {
       } else if (k === "application/javascript") {
         haveOther = true;
         const v = obj['data']['application/javascript'].join('');
-        objEl.innerHTML = `<pre><code>${v}</code></pre>`;
+        // https://github.com/jupyter/notebook/blob/2ba296039aa70afbfd90630fea14bb8461b40410/notebook/static/notebook/js/outputarea.js
+        try {
+          eval(v)
+        } catch(err) {
+          console.error(err);
+          objEl.innerHTML = `<pre><code>${v}</code></pre>`;
+          throw "error execution javascript";
+        }
       } else if (k === "application/json") {
         haveOther = true;
         const v = JSON.stringify(obj['data']['application/json'], null, 2);
@@ -375,6 +400,7 @@ export function renderCellOutput(obj, _outBody, _outCount) {
       } else if (k === "text/html") {
         haveOther = true;
         const v = obj['data']['text/html'].join('');
+        // TODO: this should have <script> tags escaped, as shuld others
         objEl.innerHTML = v;
       } else if (!!k.match('^image\/')) {
         haveOther = true;
@@ -410,8 +436,8 @@ export function renderCellOutput(obj, _outBody, _outCount) {
   
 }
 
-function updateInCount(execCount, _inCount) {
-  _inCount.querySelector(".grey-text").innerHTML = `In&nbsp;[${execCount || '&nbsp;'}]`;
+function updateInCount(value, _inCount) {
+  _inCount.querySelector(".grey-text").innerHTML = `In&nbsp;[${value || '&nbsp;'}]`;
 }
 
 // TODO: make this able to be incrementally updated
@@ -522,8 +548,10 @@ export function renderNotebookCell(el, cell, lang, callback) {
     return false;
   });
 
-  dom.on(_inCount.querySelector(".run-cell"), "click", () => {
-    callback('run cell')
+  const _runCell = _inCount.querySelector(".run-cell");
+
+  dom.on(_runCell, "click", () => {
+    callback('run cell');
   });
 
   const value = (cell.source || []).join("");
@@ -532,6 +560,8 @@ export function renderNotebookCell(el, cell, lang, callback) {
   if (cell.cell_type === "code") {
     editor = new AutoBlurMonaco(_inBody, lang, value, true);
   } else if (cell.cell_type === "markdown") {
+    _inCount.style['visibility'] = 'hidden';
+    _runCell.style['display'] = 'none';
     _inBody.style['font-family'] = 'Open Sans';
     _inBody.classList.add("rendered_html")
     _inBody.innerHTML = downa.render(value);
@@ -539,15 +569,15 @@ export function renderNotebookCell(el, cell, lang, callback) {
     throw `unrecognised cell type "${cell.cell_type}"`;
   }
 
+  dom.ap(cont, _out);
+  dom.ap(_out, _outCountWrap);
+  dom.ap(_outCountWrap, _outCount);
+  dom.ap(_out, _outBody);
+
+  _outBody.classList.add("out-body");
+  _outCount.classList.add("out-count");  
+
   if (cell.outputs && cell.outputs.length) {
-
-    dom.ap(cont, _out);
-    dom.ap(_out, _outCountWrap);
-    dom.ap(_outCountWrap, _outCount);
-    dom.ap(_out, _outBody);
-
-    _outBody.classList.add("out-body");
-    _outCount.classList.add("out-count");
 
     cell.outputs.forEach((obj) => {
       renderCellOutput(obj, _outBody, _outCount);

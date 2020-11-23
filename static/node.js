@@ -502,7 +502,7 @@ export class NotebookNode extends Node {
 
     this.updateKernel()
 
-    this.runAllCells(evalId);
+    return this.runAllCells(evalId);
   }
 
   updateKernel() {
@@ -541,23 +541,35 @@ export class NotebookNode extends Node {
     this._running = true;
     this._cellRunIdx = 0;
 
-    return this._runCellContinuous(evalId);
+    return new Promise((resolve, reject) => {
+      return this._runCellContinuous(evalId, resolve, reject);
+    });
   }
 
   runCell(cell) {
     this.updateKernel();
-    runCell(cell, this._currentKernelHelper);
+    return runCell(cell, this._currentKernelHelper)
+      .then(() => {
+        const idx = this.getChildNumber(cell);
+        if (idx < this._cells.length - 1) {
+          this.focusCell(this._cells[idx + 1]);
+        } else {
+          this.addCell(idx + 1);
+        }
+      });
   }  
 
-  _runCellContinuous(evalId) {
+  _runCellContinuous(evalId, resolve, reject) {
     // stop
     if (!this._running || this._calculator.guardCheck(evalId)) {
+      reject();
       return;
     }
 
     const nextIdx = this._getNextCodeCell(this._cellRunIdx);
     // no more cells
     if (nextIdx === undefined) {
+      resolve();
       return;
     }
     this._cellRunIdx++;
@@ -566,7 +578,9 @@ export class NotebookNode extends Node {
     this.focusCell(cell);
 
     return runCell(cell, this._currentKernelHelper).then(() => {
-      this._runCellContinuous(evalId);
+      this._runCellContinuous(evalId, resolve, reject);
+    }).catch((e) => {
+      reject(e);
     });
   }
   

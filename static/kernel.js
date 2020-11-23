@@ -59,7 +59,7 @@ export class KernelHelper {
   }
 
   _onMessage(evt) {
-    if (evt.data && evt.data.length > 1e5)
+    if (evt.data && evt.data.length > 1e6)
       throw "too long";
     var res = (JSON.parse(evt.data));
     if (res.parent_header &&
@@ -103,6 +103,14 @@ export class KernelHelper {
         const results = responses
               .filter(msg => msg.msg_type === "execute_result")
               .map((res) => res.content.data);
+
+        const errors = responses
+              .filter(msg => msg.msg_type === "error" ||
+                      (msg.content && msg.content.status === "error"));
+
+        if (errors.length) {
+          reject();
+        }
         
         resolve({
           result: results.length === 1 ? results[0] : undefined,
@@ -120,7 +128,7 @@ export class KernelHelper {
 
       const msgId = uuid();
       let responses = [];
-      this._outstandingRequests[msgId] = (content) => {
+      this._outstandingRequests[msgId] = (content, error) => {
         responses.push(content);
         if (!!incrementalCallback) {
           incrementalCallback(content)
