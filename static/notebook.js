@@ -110,10 +110,11 @@ monaco.editor.defineTheme('grey-bg', {
 
 export class AutoBlurMonaco {
 
-  constructor(el, language, value, autoGrow) {
+  constructor(el, language, value, autoGrow, callback) {
     this._fontSize = 14;
     this.makeStatic(el, language, value);
     this._autoGrow = !!autoGrow;
+    this._callback = callback;
   }
 
   getValue() {
@@ -150,6 +151,14 @@ export class AutoBlurMonaco {
       folding: false,
 
     });
+
+    var KM = monaco.KeyMod;
+    var KC = monaco.KeyCode;
+    editor.addCommand(KM.chord(KM.Shift | KC.Enter), (e) => {
+      if (this._callback) {
+        this._callback('run cell');
+      }
+    });    
 
     editor.onDidBlurEditorWidget(()=>{
       this.makeStatic(el, language, editor.getModel().getValue());
@@ -558,7 +567,7 @@ export function renderNotebookCell(el, cell, lang, callback) {
   let editor;
 
   if (cell.cell_type === "code") {
-    editor = new AutoBlurMonaco(_inBody, lang, value, true);
+    editor = new AutoBlurMonaco(_inBody, lang, value, true, callback);
   } else if (cell.cell_type === "markdown") {
     _inCount.style['visibility'] = 'hidden';
     _runCell.style['display'] = 'none';
