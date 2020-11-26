@@ -242,8 +242,11 @@ export class Node {
     this._renderOpen = false;
   }
 
-  render(n, el, data, last_value) {
+  setRenderOpen() {
     this._renderOpen = true;
+  }
+
+  render(n, el, data, last_value) {
     // i.e. slickgrid etc.
     // TODO: regard width/height e.g. restore/maximise,
     // e.g. window.innerWidth etc. if maximised,
@@ -460,6 +463,8 @@ export class NotebookNode extends Node {
 
   constructor(data, calculator) {
     super(data, calculator);
+
+    this._init = false;
     this._cells = [];
 
     this._running = false;
@@ -596,6 +601,7 @@ export class NotebookNode extends Node {
   }
 
   deserializeNotebook(conf) {
+    this._init = true;
     this._cells = (conf.cells || []).map(c => new NotebookCell(c, this))
     this._metadata = conf.metadata;
     this._nbformat = conf.nbformat;
@@ -846,27 +852,6 @@ export class NotebookNode extends Node {
   
 }
 
-export class TextNode extends Node {
-
-  invoke(node, data, incomers, evalId, isForced) {
-    const values = this.getPreviousValues(incomers) || {};
-    
-    return new Promise((resolve) => {
-      resolve(JSON.stringify(values));
-    })
-  }
-
-  render(n, el, data, last_value) {
-    var cont = document.createElement("div");
-    cont.classList.add("basic-box");
-    cont.style['margin-top'] = '10px';
-    el.appendChild(cont);
-
-    cont.innerHTML = last_value
-  }
-  
-}
-
 export class NotebookCellNode extends NotebookNode {
 
   constructor(data, calculator) {
@@ -875,7 +860,9 @@ export class NotebookCellNode extends NotebookNode {
   }
 
   invoke(node, data, incomers, evalId, isForced) {
-    this.refreshSingleCell();
+    if (!this._renderOpen || !this._init) {
+      this.refreshSingleCell();
+    }
     this.updateKernel();
     return this.runAllCells(evalId);
   }
@@ -900,6 +887,27 @@ export class NotebookCellNode extends NotebookNode {
 
   setupMenu(contWrap, menu) {
     contWrap.style['padding-top'] = '0px';
+  }
+  
+}
+
+export class TextNode extends Node {
+
+  invoke(node, data, incomers, evalId, isForced) {
+    const values = this.getPreviousValues(incomers) || {};
+    
+    return new Promise((resolve) => {
+      resolve(JSON.stringify(values));
+    })
+  }
+
+  render(n, el, data, last_value) {
+    var cont = document.createElement("div");
+    cont.classList.add("basic-box");
+    cont.style['margin-top'] = '10px';
+    el.appendChild(cont);
+
+    cont.innerHTML = last_value
   }
   
 }

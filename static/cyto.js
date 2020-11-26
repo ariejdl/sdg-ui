@@ -273,6 +273,7 @@ export function setupCyto() {
 
     try {
       scratchNode['node'].render(evt.target, el, data, scratchEval['last_return_value']);
+      scratchNode['node'].setRenderOpen();
     } catch (e) {
       throw e;
     }
