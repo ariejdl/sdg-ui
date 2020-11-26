@@ -510,6 +510,12 @@ export class NotebookNode extends Node {
   }
 
   updateKernel() {
+    const kernelNode = this.getNotebookKernel(this._node);
+    const kernelHelper = kernelNode.node._currentKernel;
+    this._currentKernelHelper = kernelHelper;    
+  }
+
+  getNotebookKernel(node) {
     const incomers = this._node.incomers().filter(o => o.isNode());
     this._currentKernelHelper = undefined;
 
@@ -520,9 +526,7 @@ export class NotebookNode extends Node {
       throw "expected one kernel";
     }
 
-    const kernelNode = kernels[0].scratch('node');
-    const kernelHelper = kernelNode.node._currentKernel;
-    this._currentKernelHelper = kernelHelper;    
+    return kernels[0].scratch('node');
   }
 
   stopRun() {
@@ -701,15 +705,13 @@ export class NotebookNode extends Node {
 
   render(n, el, data, last_value) {
     super.render(n, el, data, last_value)
-    const incomers = n.incomers().filter(n => n.isNode())
+    const kernel = this.getNotebookKernel(n);
 
-    const kernel = incomers.filter(o => o.data()["kind"] === "kernel");
-
-    if (kernel.length !== 1) {
+    if (!kernel) {
       throw "need a single language for notebook from kernel";
     }
 
-    const kernelName = (kernel[0].data().data || {})['kernel-name'];
+    const kernelName = (kernel.node._data.data || {})['kernel-name'];
 
     if (!kernelName) {
       throw "No kernel name for notebook set in kernel";
@@ -888,6 +890,38 @@ export class NotebookCellNode extends NotebookNode {
   setupMenu(contWrap, menu) {
     contWrap.style['padding-top'] = '0px';
   }
+
+  updateKernel() {
+    const kernelNode = this.getNotebookKernel(this._node);
+    const kernelHelper = kernelNode.node._currentKernel;
+    this._currentKernelHelper = kernelHelper;
+  }
+
+  getNotebookKernel(node) {
+    // TODO
+    // need to find preceding notebook cell and get the kernel from it?
+
+    const incomers = node.incomers().filter(o => o.isNode());
+    this._currentKernelHelper = undefined;
+
+    const kernels = incomers
+          .filter(o => o.data()["kind"] === "kernel");
+    const nCells = incomers
+          .filter(o => o.data()["kind"] === "notebook-cell");
+
+    if (kernels.length !== 1 && nCells.length !== 1) {
+      throw "expected either one kernel or one previous notebook cell";
+    }
+
+    if (nCells.length) {
+      const nbCellNode = nCells[0].scratch('node');
+      return nbCellNode.node.getNotebookKernel(nCells[0]);
+    } else if (kernels.length) {
+      return kernels[0].scratch('node');
+    }
+
+  }
+  
   
 }
 

@@ -3,7 +3,7 @@ import { getNode, Node, ServerNode, NotebookNode } from "./node.js";
 
 const greenColor = '#11dd22';
 
-const _textNBCell = {
+const _textNBCell1 = {
   "cell_type": "code",
   "execution_count": 1,
   "metadata": {
@@ -14,6 +14,18 @@ const _textNBCell = {
     'print("hello 1")\n',
     'print("hello 2")\n',
     '24 ** 3'
+  ]
+};
+
+const _textNBCell2 = {
+  "cell_type": "code",
+  "execution_count": 1,
+  "metadata": {
+    "collapsed": false
+  },
+  "outputs": [],
+  "source": [
+    '_ * 10'
   ]
 };
 
@@ -435,12 +447,18 @@ $sym['B'][2:10] = 'overwrite test'
       data: { id: 'x5', kind: 'notebook', name: 'Notebook' },
       position: { x: 350, y: 200 } },
     { group: 'nodes',
-      data: { id: 'x6', kind: 'notebook-cell', name: 'Notebook Cell',
-              data: { cell: _textNBCell } },
+      data: { id: 'x6', kind: 'notebook-cell', name: 'Cell 1',
+              data: { cell: _textNBCell1 } },
       position: { x: 350, y: 250 } },
+
+    { group: 'nodes',
+      data: { id: 'x11', kind: 'notebook-cell', name: 'Cell 2',
+              data: { cell: _textNBCell2 } },
+      position: { x: 500, y: 250 } },
+    
     { group: 'nodes',
       data: { id: 'x7', kind: 'text', name: 'Text Rep.' }, // TODO: show value
-      position: { x: 500, y: 250 } },
+      position: { x: 650, y: 250 } },
     { group: 'nodes',
       data: { id: 'x8', kind: 'python-dataframe', name: 'Py Dataframe',
               data: { } },
@@ -491,7 +509,9 @@ $sym['B'][2:10] = 'overwrite test'
     { group: 'edges',
       data: { id: 'x2x6', source: 'x2', target: 'x6' } },
     { group: 'edges',
-      data: { id: 'x6x7', source: 'x6', target: 'x7' } },
+      data: { id: 'x6x11', source: 'x6', target: 'x11' } },
+    { group: 'edges',
+      data: { id: 'x11x7', source: 'x11', target: 'x7' } },
     { group: 'edges',
       data: { id: 'x2x8', source: 'x2', target: 'x8' } },
     { group: 'edges',
