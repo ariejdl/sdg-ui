@@ -236,7 +236,6 @@ export class Node {
       console.log('invoke: ' + data.kind)
       resolve();
     });
-    
   }
 
   clearRender() {
@@ -469,7 +468,7 @@ export class NotebookNode extends Node {
 
   invoke(node, data, incomers, evalId, isForced) {
 
-    // deserialise notebook if available
+    // deserialize notebook if available
     if (!this._initFile) {
       const file = incomers.filter(o => o.data()["kind"] === "server-file");
       
@@ -500,7 +499,7 @@ export class NotebookNode extends Node {
       return;
     }
 
-    this.updateKernel()
+    this.updateKernel();
 
     return this.runAllCells(evalId);
   }
@@ -562,6 +561,7 @@ export class NotebookNode extends Node {
   _runCellContinuous(evalId, resolve, reject) {
     // stop
     if (!this._running || this._calculator.guardCheck(evalId)) {
+      this._previousResult = undefined;
       reject();
       return;
     }
@@ -569,7 +569,7 @@ export class NotebookNode extends Node {
     const nextIdx = this._getNextCodeCell(this._cellRunIdx);
     // no more cells
     if (nextIdx === undefined) {
-      resolve();
+      resolve(this._previousResult);
       return;
     }
     this._cellRunIdx++;
@@ -577,9 +577,11 @@ export class NotebookNode extends Node {
     const cell = this._cells[nextIdx];
     this.focusCell(cell);
 
-    return runCell(cell, this._currentKernelHelper).then(() => {
+    return runCell(cell, this._currentKernelHelper).then((result) => {
+      this._previousResult = result;
       this._runCellContinuous(evalId, resolve, reject);
     }).catch((e) => {
+      this._previousResult = undefined;
       reject(e);
     });
   }
@@ -662,6 +664,10 @@ export class NotebookNode extends Node {
       const selCellType = this._menu.querySelector(".cell-type");
       selCellType.value = (cell.getCell().cell_type || "code");
     }
+
+    if (cell === this._currentFocus) {
+      return;
+    }
     
     if (this._currentFocus) {
       this._currentFocus.blur();
@@ -714,6 +720,24 @@ export class NotebookNode extends Node {
       throw "No matching language from kernel found, e.g. python or javascript.";
     }
     
+    this._notebookLanguage = notebookLanguage;
+
+    this.setupRender(el);
+
+    if (this._cells) {
+      // async draw, probably improves performance slightly
+      setTimeout(() => {
+        this._cells.forEach((cell) => {
+          cell.setLanguage(this._notebookLanguage);
+          cell.render();
+          dom.ap(this._currentCont, cell.getEl());
+        });
+      }, 0);
+    }
+
+  }
+
+  setupRender(el) {
     var cont = dom.ce("div");
     var contWrap = dom.ce("div");
     var menu = dom.ce("div");
@@ -723,6 +747,8 @@ export class NotebookNode extends Node {
     menu.classList.add("menu-bar");
     menu.classList.add("general-form");
 
+    this._currentCont = cont;
+
     cont.style['background'] = 'white';
     cont.style['height'] = '400px';
     cont.style['width'] = '600px';
@@ -730,6 +756,16 @@ export class NotebookNode extends Node {
 
     dom.ap(el, contWrap);
     dom.ap(contWrap, cont);
+
+    this.setupMenu(contWrap, menu);
+  }
+
+  runSelf() {
+    this.saveCells();
+    super.runSelf();
+  }
+
+  setupMenu(contWrap, menu) {
     dom.ap(contWrap, menu);
 
     this._menu = menu;
@@ -805,22 +841,7 @@ export class NotebookNode extends Node {
       c["cell_type"] = value;
       cell.setCell(c);
       cell.render();
-    });
-
-    this._notebookLanguage = notebookLanguage;
-    this._currentCont = cont;
-
-    if (this._cells) {
-      // async draw, probably improves performance slightly
-      setTimeout(() => {
-        this._cells.forEach((cell) => {
-          cell.setLanguage(this._notebookLanguage);
-          cell.render();
-          dom.ap(this._currentCont, cell.getEl());
-        });
-      }, 0);
-    }
-
+    });    
   }
   
 }
@@ -846,23 +867,39 @@ export class TextNode extends Node {
   
 }
 
-export class NotebookCellNode extends Node {
+export class NotebookCellNode extends NotebookNode {
+
+  constructor(data, calculator) {
+    super(data, calculator);
+    this._isSingleCell = true;
+  }
 
   invoke(node, data, incomers, evalId, isForced) {
+    this.refreshSingleCell();
+    this.updateKernel();
+    return this.runAllCells(evalId);
+  }
 
-    const kernels = incomers
-          .filter(o => o.data()["kind"] === "kernel");
+  runCell(cell) {
+    this.runSelf();
+  }  
 
-    if (kernels.length !== 1) {
-      throw "expected one kernel";
+  refreshSingleCell() {
+    this._cells = [];
+    const cell = (this._data.data || {}).cell;
+    if (cell.cell_type === "markdown") {
+      console.warn("single notebook cells should only be code, found markdown type");
+      cell.cell_type = "code";
     }
-
-    const kernelNode = kernels[0].scratch('node');
-    const kernelHelper = kernelNode.node._currentKernel;
-
-    if (kernelHelper) {
-      // TODO: invoke cell
+    if (cell) {
+      this.deserializeNotebook({
+        cells: [cell]
+      });
     }
+  }
+
+  setupMenu(contWrap, menu) {
+    contWrap.style['padding-top'] = '0px';
   }
   
 }

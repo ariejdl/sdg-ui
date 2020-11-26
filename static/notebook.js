@@ -62,7 +62,7 @@ export class NotebookCell {
       } else {
         throw "unrecognised event";
       }
-    });
+    }, this._parent._isSingleCell);
 
   }
 
@@ -366,6 +366,7 @@ export function runCell(cell, kernelHelper) {
   const incRender = new IncrementalCellRenderer(cell);
   
   return kernelHelper.execCodeSimple(code.join(""), incRender.callback.bind(incRender))
+    .then((obj) => obj.result)
 }
 
 export function renderCellOutput(obj, _outBody, _outCount) {
@@ -393,9 +394,8 @@ export function renderCellOutput(obj, _outBody, _outCount) {
         try {
           eval(v)
         } catch(err) {
-          console.error(err);
+          console.warn(err);
           objEl.innerHTML = `<pre><code>${v}</code></pre>`;
-          throw "error execution javascript";
         }
       } else if (k === "application/json") {
         haveOther = true;
@@ -473,7 +473,7 @@ not all these covered at this time
 - … kernel_info_request kernel_info_reply
 
  */
-export function renderNotebookCell(el, cell, lang, callback) {
+export function renderNotebookCell(el, cell, lang, callback, isSingleCell) {
   // TODO: conver the below to multi-line string
   el.innerHTML = "";
 
@@ -547,6 +547,10 @@ export function renderNotebookCell(el, cell, lang, callback) {
   _butBelow.classList.add("cell-action")
   _butBelow.innerHTML = `<img src="/static/images/bootstrap-icons/plus.svg">`;
   _butBelow.classList.add("insert-below");
+
+  if (isSingleCell === true) {
+    _butBelow['style']['display'] = 'none';
+  }
 
   dom.ap(cont, _butBelow);
 

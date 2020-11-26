@@ -3,6 +3,20 @@ import { getNode, Node, ServerNode, NotebookNode } from "./node.js";
 
 const greenColor = '#11dd22';
 
+const _textNBCell = {
+  "cell_type": "code",
+  "execution_count": 1,
+  "metadata": {
+    "collapsed": false
+  },
+  "outputs": [],
+  "source": [
+    'print("hello 1")\n',
+    'print("hello 2")\n',
+    '24 ** 3'
+  ]
+};
+
 const _handleStyle = [            // some style for the extension
 
   {
@@ -421,7 +435,7 @@ $sym['B'][2:10] = 'overwrite test'
       position: { x: 350, y: 200 } },
     { group: 'nodes',
       data: { id: 'x6', kind: 'notebook-cell', name: 'Notebook Cell',
-              data: { code: 'print("hello 1")\nprint("hello 2")\n24 ** 3' } },
+              data: { cell: _textNBCell } },
       position: { x: 350, y: 250 } },
     { group: 'nodes',
       data: { id: 'x7', kind: 'text', name: 'Text Rep.' }, // TODO: show value
